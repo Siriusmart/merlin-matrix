@@ -1,7 +1,7 @@
 use matrix_sdk::{Client, config::SyncSettings};
 use merlin_matrix::{
-    config::{self, ConfigSerde, creds::CredsConfig},
-    handlers,
+    config::{ConfigSerde, creds::CredsConfig},
+    handlers, init,
 };
 use tracing::*;
 use tracing_subscriber::EnvFilter;
@@ -30,6 +30,8 @@ async fn main() {
         .await
         .expect("failed to create client");
 
+    init::init(&client);
+
     client
         .matrix_auth()
         .login_username(creds.username(), creds.password())
@@ -43,7 +45,6 @@ async fn main() {
         homeserver = creds.homeserver()
     );
 
-    config::register(&client);
     handlers::register::first_sync(&client);
 
     debug!("Starting first sync");

@@ -3,6 +3,7 @@ use std::{env, error::Error, fs, path::PathBuf};
 use serde::{Serialize, de::DeserializeOwned};
 
 pub mod creds;
+pub mod data;
 pub mod handlers;
 pub mod register;
 

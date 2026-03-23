@@ -1,5 +1,5 @@
 use matrix_sdk::{
-    RoomState,
+    Client, RoomState,
     room::Room,
     ruma::events::room::message::{
         AddMentions, ForwardThread, MessageType, OriginalSyncRoomMessageEvent,
@@ -9,8 +9,11 @@ use matrix_sdk::{
 use tracing::*;
 
 #[instrument(skip_all)]
-pub async fn on_new_message(event: OriginalSyncRoomMessageEvent, room: Room) {
+pub async fn on_new_message(event: OriginalSyncRoomMessageEvent, client: Client, room: Room) {
     if room.state() != RoomState::Joined {
+        return;
+    }
+    if event.sender == client.user_id().unwrap() {
         return;
     }
 
@@ -19,7 +22,7 @@ pub async fn on_new_message(event: OriginalSyncRoomMessageEvent, room: Room) {
     };
 
     if content.body == ".ping" {
-        let reply = RoomMessageEventContent::text_plain("pong").make_reply_to(
+        let reply = RoomMessageEventContent::text_plain(".ping").make_reply_to(
             &event.into_full_event(room.room_id().to_owned()),
             ForwardThread::Yes,
             AddMentions::Yes,
