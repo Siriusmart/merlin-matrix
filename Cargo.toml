@@ -9,3 +9,5 @@ matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "392
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
 toml = "1"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

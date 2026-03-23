@@ -6,7 +6,9 @@ use matrix_sdk::{
         RoomMessageEventContent,
     },
 };
+use tracing::*;
 
+#[instrument(skip_all)]
 pub async fn on_new_message(event: OriginalSyncRoomMessageEvent, room: Room) {
     if room.state() != RoomState::Joined {
         return;
@@ -23,6 +25,8 @@ pub async fn on_new_message(event: OriginalSyncRoomMessageEvent, room: Room) {
             AddMentions::Yes,
         );
 
-        room.send(reply).await.unwrap();
+        if let Err(err) = room.send(reply).await {
+            error!("{err}")
+        }
     }
 }

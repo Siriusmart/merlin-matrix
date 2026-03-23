@@ -13,7 +13,7 @@ impl ConfigDe for HandlersConfig {
     const PATH: &'static str = "handlers";
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct OnInviteHandlerConfig {
     #[serde(rename = "initial-delay")]
     initial_delay: f64,
