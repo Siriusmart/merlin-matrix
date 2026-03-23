@@ -1,0 +1,11 @@
+[package]
+name = "merlin-matrix"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+evalexpr = { version = "13.1.0", features = ["serde"] }
+matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "39255c0" }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["fs", "macros", "rt-multi-thread"] }
+toml = "1"
