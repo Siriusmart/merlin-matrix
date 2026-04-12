@@ -13,14 +13,44 @@ Since Matrix does not have the concept of communities (disjoint set of channels)
 ### Groups
 |Field|Data type|
 |---|---|
-|id|integer|
+|group_id|int|
 |name|text|
-|owner_name|text|
-|owner_homeserver|text|
-|admin_group|integer (nullable)|
+|owner_id|int|
+|admin_group_id|int (nullable)|
 
-### Counters
+### User
 |Field|Data type|
 |---|---|
-|id|text|
-|value|integer|
+|user_id|int|
+|name|text|
+|homeserver|text|
+
+### Context
+|Field|Data type|
+|---|---|
+|context_id|integer|
+|name|text|
+|description|text|
+|owner_id|int|
+|admin_group|integer (nullable)|
+
+### Permission
+|Field|Data type|
+|---|---|
+|permission_id|int|
+|qualifier|text|
+
+### Room
+|Field|Data type|
+|---|---|
+|room_id|integer|
+|matrix_room_id|integer|
+|matrix_room_homeserver|text|
+|context_id|int (nullable)|
+
+### ContextPermission
+|Field|Data type|
+|---|---|
+|context_id|int|
+|permission_id|int|
+|allowed|bool|

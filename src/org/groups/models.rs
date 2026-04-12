@@ -1,30 +1,32 @@
 use diesel::{
     QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
-    prelude::{Insertable, Queryable},
+    prelude::{Associations, Identifiable, Insertable, Queryable},
     query_dsl::methods::FindDsl,
     sqlite::Sqlite,
 };
 use std::error::Error;
 
-use crate::org::DatabasePool;
+use crate::org::{DatabasePool, users::UserId};
 
 use super::schema::groups;
 
-#[derive(DieselNewType, Debug)]
+#[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
 pub struct GroupId(i32);
 
 /// - The user creating the group is by default the owner, ownership can be transferred
 /// - After creating the group, the owner of the group is not in the group
 /// - Users of the admin group can add, remove group members
 /// - The owner can replace/remove the admin group
-#[derive(Selectable, Queryable, Insertable)]
-#[diesel(table_name = super::schema::groups)]
+#[derive(Selectable, Queryable, Insertable, Identifiable, Associations)]
 #[diesel(check_for_backend(Sqlite))]
+#[diesel(table_name = super::schema::groups)]
+#[diesel(primary_key(group_id))]
+#[diesel(belongs_to(crate::org::users::User, foreign_key = owner_id))]
+#[diesel(belongs_to(crate::org::groups::Group, foreign_key = admin_group_id))]
 pub struct Group {
-    id: i32,
-    display: String,
-    owner_name: String,
-    owner_homeserver: String,
+    group_id: GroupId,
+    name: String,
+    owner_id: UserId,
     admin_group_id: Option<GroupId>,
 }
 
@@ -32,23 +34,17 @@ pub struct Group {
 #[diesel(table_name = super::schema::groups)]
 #[diesel(check_for_backend(Sqlite))]
 pub struct NewGroup {
-    display: String,
-    owner_name: String,
-    owner_homeserver: String,
+    name: String,
+    owner_id: UserId,
 }
 
 impl Group {
     pub fn create_new(
         pool: &DatabasePool,
-        display: String,
-        owner_name: String,
-        owner_homeserver: String,
+        name: String,
+        owner_id: UserId,
     ) -> Result<Self, Box<dyn Error>> {
-        let new_group = NewGroup {
-            display,
-            owner_name,
-            owner_homeserver,
-        };
+        let new_group = NewGroup { name, owner_id };
 
         let mut conn = pool.get().unwrap();
 
@@ -61,11 +57,9 @@ impl Group {
     pub fn change_owner(
         mut self,
         pool: &DatabasePool,
-        owner_name: String,
-        owner_homeserver: String,
+        owner_id: UserId,
     ) -> Result<Group, Box<dyn Error>> {
-        self.owner_name = owner_name;
-        self.owner_homeserver = owner_homeserver;
+        self.owner_id = owner_id;
 
         let mut conn = pool.get().unwrap();
 
@@ -93,7 +87,7 @@ impl Group {
     pub fn delete(self, pool: &DatabasePool) -> Result<(), Box<dyn Error>> {
         let mut conn = pool.get().unwrap();
 
-        diesel::delete(FindDsl::find(groups::table, self.id)).execute(&mut conn)?;
+        diesel::delete(FindDsl::find(groups::table, self.group_id)).execute(&mut conn)?;
 
         Ok(())
     }

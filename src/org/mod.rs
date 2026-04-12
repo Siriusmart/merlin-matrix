@@ -1,11 +1,15 @@
 use std::{error::Error, fs, ops::Deref, path::Path};
 
 use diesel::{
-    SqliteConnection,
-    r2d2::{ConnectionManager, Pool},
+    RunQueryDsl, SqliteConnection,
+    r2d2::{ConnectionManager, CustomizeConnection, Pool},
 };
 
+pub mod contexts;
 pub mod groups;
+pub mod permissions;
+pub mod rooms;
+pub mod users;
 
 type DatabaseBackend = SqliteConnection;
 type DatabasePool = Pool<ConnectionManager<DatabaseBackend>>;
@@ -25,6 +29,7 @@ impl Database {
 
         Ok(Self(
             Pool::builder()
+                .connection_customizer(Box::new(ForeignKeyEnforcer)) // foreign key checks in sqlite
                 .idle_timeout(None) // hopefully disables timeout
                 .build(manager)
                 .unwrap(),
@@ -38,5 +43,18 @@ impl Deref for Database {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Debug)]
+struct ForeignKeyEnforcer;
+
+impl CustomizeConnection<DatabaseBackend, diesel::r2d2::Error> for ForeignKeyEnforcer {
+    fn on_acquire(&self, conn: &mut DatabaseBackend) -> Result<(), diesel::r2d2::Error> {
+        diesel::sql_query("PRAGMA foreign_keys = ON")
+            .execute(conn)
+            .map_err(diesel::r2d2::Error::QueryError)?;
+
+        Ok(())
     }
 }
