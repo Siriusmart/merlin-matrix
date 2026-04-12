@@ -1,5 +1,5 @@
 use diesel::{
-    QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
+    ExpressionMethods, QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
     prelude::{Associations, Identifiable, Insertable, Queryable},
     query_dsl::methods::FindDsl,
     sqlite::Sqlite,
@@ -19,7 +19,7 @@ pub struct GroupId(i32);
 /// - The owner can replace/remove the admin group
 #[derive(Selectable, Queryable, Insertable, Identifiable, Associations)]
 #[diesel(check_for_backend(Sqlite))]
-#[diesel(table_name = super::schema::groups)]
+#[diesel(table_name = groups)]
 #[diesel(primary_key(group_id))]
 #[diesel(belongs_to(crate::org::users::User, foreign_key = owner_id))]
 #[diesel(belongs_to(crate::org::groups::Group, foreign_key = admin_group_id))]
@@ -31,7 +31,7 @@ pub struct Group {
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = super::schema::groups)]
+#[diesel(table_name = groups)]
 #[diesel(check_for_backend(Sqlite))]
 pub struct NewGroup {
     name: String,
@@ -55,33 +55,35 @@ impl Group {
     }
 
     pub fn change_owner(
-        mut self,
+        &mut self,
         pool: &DatabasePool,
         owner_id: UserId,
-    ) -> Result<Group, Box<dyn Error>> {
-        self.owner_id = owner_id;
-
+    ) -> Result<(), Box<dyn Error>> {
         let mut conn = pool.get().unwrap();
 
-        Ok(diesel::replace_into(groups::table)
-            .values(&self)
-            .returning(Group::as_returning())
-            .get_result(&mut conn)?)
+        diesel::update(&*self)
+            .set(groups::owner_id.eq(&owner_id))
+            .execute(&mut conn)?;
+
+        self.owner_id = owner_id;
+
+        Ok(())
     }
 
     pub fn change_admin_group(
-        mut self,
+        &mut self,
         pool: &DatabasePool,
         admin_group_id: Option<GroupId>,
-    ) -> Result<Group, Box<dyn Error>> {
-        self.admin_group_id = admin_group_id;
-
+    ) -> Result<(), Box<dyn Error>> {
         let mut conn = pool.get().unwrap();
 
-        Ok(diesel::replace_into(groups::table)
-            .values(&self)
-            .returning(Group::as_returning())
-            .get_result(&mut conn)?)
+        diesel::update(&*self)
+            .set(groups::admin_group_id.eq(&admin_group_id))
+            .execute(&mut conn)?;
+
+        self.admin_group_id = admin_group_id;
+
+        Ok(())
     }
 
     pub fn delete(self, pool: &DatabasePool) -> Result<(), Box<dyn Error>> {

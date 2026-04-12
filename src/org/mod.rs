@@ -2,7 +2,7 @@ use std::{error::Error, fs, ops::Deref, path::Path};
 
 use diesel::{
     RunQueryDsl, SqliteConnection,
-    r2d2::{ConnectionManager, CustomizeConnection, Pool},
+    r2d2::{ConnectionManager, CustomizeConnection, Pool, PooledConnection},
 };
 
 pub mod contexts;
@@ -13,6 +13,7 @@ pub mod users;
 
 type DatabaseBackend = SqliteConnection;
 type DatabasePool = Pool<ConnectionManager<DatabaseBackend>>;
+type DatabaseConnection = PooledConnection<ConnectionManager<DatabaseBackend>>;
 
 /// connection to the sqlite database
 #[derive(Clone)]
