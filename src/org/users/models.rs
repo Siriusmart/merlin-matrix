@@ -27,7 +27,7 @@ pub struct User {
 #[derive(Insertable)]
 #[diesel(table_name = users)]
 #[diesel(check_for_backend(Sqlite))]
-pub struct NewUser {
+struct NewUser {
     name: String,
     homeserver: String,
 }

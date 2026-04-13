@@ -33,7 +33,7 @@ pub struct Group {
 #[derive(Insertable)]
 #[diesel(table_name = groups)]
 #[diesel(check_for_backend(Sqlite))]
-pub struct NewGroup {
+struct NewGroup {
     name: String,
     owner_id: UserId,
 }

@@ -53,4 +53,5 @@ Since Matrix does not have the concept of communities (disjoint set of channels)
 |---|---|
 |context_id|int|
 |permission_id|int|
+|priority|int|
 |allowed|bool|

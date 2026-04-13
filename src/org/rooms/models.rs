@@ -28,7 +28,7 @@ pub struct Room {
 #[derive(Insertable)]
 #[diesel(table_name = rooms)]
 #[diesel(check_for_backend(Sqlite))]
-pub struct NewRoom {
+struct NewRoom {
     matrix_room_id: String,
     matrix_room_homeserver: String,
 }

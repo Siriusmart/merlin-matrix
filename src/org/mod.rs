@@ -10,6 +10,7 @@ pub mod groups;
 pub mod permissions;
 pub mod rooms;
 pub mod users;
+pub mod context_permissions;
 
 type DatabaseBackend = SqliteConnection;
 type DatabasePool = Pool<ConnectionManager<DatabaseBackend>>;

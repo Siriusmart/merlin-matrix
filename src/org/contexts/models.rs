@@ -30,7 +30,7 @@ pub struct Context {
 #[derive(Insertable)]
 #[diesel(table_name = contexts)]
 #[diesel(check_for_backend(Sqlite))]
-pub struct NewContext {
+struct NewContext {
     name: String,
     description: String,
     owner_id: UserId,
