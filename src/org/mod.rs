@@ -5,12 +5,15 @@ use diesel::{
     r2d2::{ConnectionManager, CustomizeConnection, Pool, PooledConnection},
 };
 
+pub mod context_permissions;
 pub mod contexts;
+pub mod group_users;
 pub mod groups;
 pub mod permissions;
 pub mod rooms;
 pub mod users;
-pub mod context_permissions;
+
+pub mod utils;
 
 type DatabaseBackend = SqliteConnection;
 type DatabasePool = Pool<ConnectionManager<DatabaseBackend>>;

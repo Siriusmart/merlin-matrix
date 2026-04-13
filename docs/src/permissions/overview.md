@@ -25,6 +25,12 @@ Since Matrix does not have the concept of communities (disjoint set of channels)
 |name|text|
 |homeserver|text|
 
+### GroupUsers
+|Field|Data type|
+|---|---|
+|user_id|int|
+|group_id|int|
+
 ### Context
 |Field|Data type|
 |---|---|
