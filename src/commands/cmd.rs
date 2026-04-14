@@ -4,12 +4,15 @@ use matrix_sdk::{
     Client, Room, async_trait, ruma::events::room::message::OriginalSyncRoomMessageEvent,
 };
 
+/// event information passed to the command program
 pub struct CmdContext {
     pub client: Client,
     pub event: OriginalSyncRoomMessageEvent,
     pub room: Room,
 }
 
+/// A command is a similar to a binary on Unix, it is invokable, and
+/// responsible for handling all its arguments, including subcommands
 #[async_trait]
 pub trait Cmd: Sync + Send {
     /// permissions to be tested whether the command can be ran,
