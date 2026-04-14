@@ -3,7 +3,7 @@ use diesel::table;
 table! {
     users(user_id) {
         user_id -> Integer,
-        name -> Text,
-        homeserver -> Text
+        m_user_id -> Text,
+        m_user_homeserver -> Text
     }
 }

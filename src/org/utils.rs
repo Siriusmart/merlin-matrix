@@ -30,8 +30,8 @@ pub fn user_has_permission(
 
     let user_groups = users::table
         .inner_join(group_users::table.on(group_users::user_id.eq(users::user_id)))
-        .filter(users::name.eq(m_user_id))
-        .filter(users::homeserver.eq(m_user_homeserver))
+        .filter(users::m_user_id.eq(m_user_id))
+        .filter(users::m_user_homeserver.eq(m_user_homeserver))
         .select(group_users::group_id)
         .distinct();
 
@@ -46,8 +46,8 @@ pub fn user_has_permission(
                 .on(permissions::permission_id.eq(context_permissions::permission_id)),
         )
         .filter(permissions::qualifier.eq(permission_qualifier))
-        .filter(rooms::matrix_room_id.eq(m_room_id))
-        .filter(rooms::matrix_room_homeserver.eq(m_room_homeserver))
+        .filter(rooms::m_room_id.eq(m_room_id))
+        .filter(rooms::m_room_homeserver.eq(m_room_homeserver))
         .filter(context_permissions::group_id.eq_any(user_groups))
         .order_by(context_permissions::priority.asc())
         .then_order_by(context_permissions::permission_id.asc())

@@ -20,25 +20,28 @@ pub struct UserId(i32);
 #[diesel(primary_key(user_id))]
 pub struct User {
     user_id: UserId,
-    name: String,
-    homeserver: String,
+    m_user_id: String,
+    m_user_homeserver: String,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = users)]
 #[diesel(check_for_backend(Sqlite))]
 struct NewUser {
-    name: String,
-    homeserver: String,
+    m_user_id: String,
+    m_user_homeserver: String,
 }
 
 impl User {
     pub fn get_or_create(
         pool: &DatabasePool,
-        name: String,
-        homeserver: String,
+        m_user_id: String,
+        m_user_homeserver: String,
     ) -> Result<User, Box<dyn Error>> {
-        let new_user = NewUser { name, homeserver };
+        let new_user = NewUser {
+            m_user_id,
+            m_user_homeserver,
+        };
 
         let mut conn = pool.get().unwrap();
 
@@ -48,8 +51,8 @@ impl User {
             .execute(&mut conn)?;
 
         Ok(users::table
-            .filter(users::name.eq(new_user.name))
-            .filter(users::homeserver.eq(new_user.homeserver))
+            .filter(users::m_user_id.eq(new_user.m_user_id))
+            .filter(users::m_user_homeserver.eq(new_user.m_user_homeserver))
             .first(&mut conn)?)
     }
 }

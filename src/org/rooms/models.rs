@@ -20,8 +20,8 @@ pub struct RoomId(i32);
 #[diesel(belongs_to(crate::org::contexts::Context, foreign_key = context_id))]
 pub struct Room {
     room_id: RoomId,
-    matrix_room_id: String,
-    matrix_room_homeserver: String,
+    m_room_id: String,
+    m_room_homeserver: String,
     context_id: Option<ContextId>,
 }
 
@@ -29,19 +29,19 @@ pub struct Room {
 #[diesel(table_name = rooms)]
 #[diesel(check_for_backend(Sqlite))]
 struct NewRoom {
-    matrix_room_id: String,
-    matrix_room_homeserver: String,
+    m_room_id: String,
+    m_room_homeserver: String,
 }
 
 impl Room {
     pub fn get_or_create(
         pool: &DatabasePool,
-        matrix_room_id: String,
-        matrix_room_homeserver: String,
+        m_room_id: String,
+        m_room_homeserver: String,
     ) -> Result<Room, Box<dyn Error>> {
         let new_room = NewRoom {
-            matrix_room_id,
-            matrix_room_homeserver,
+            m_room_id,
+            m_room_homeserver,
         };
 
         let mut conn = pool.get().unwrap();
@@ -52,8 +52,8 @@ impl Room {
             .execute(&mut conn)?;
 
         Ok(rooms::table
-            .filter(rooms::matrix_room_id.eq(new_room.matrix_room_id))
-            .filter(rooms::matrix_room_homeserver.eq(new_room.matrix_room_homeserver))
+            .filter(rooms::m_room_id.eq(new_room.m_room_id))
+            .filter(rooms::m_room_homeserver.eq(new_room.m_room_homeserver))
             .first(&mut conn)?)
     }
 
