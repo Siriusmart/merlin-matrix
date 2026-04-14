@@ -7,7 +7,7 @@ use diesel::{
     sqlite::Sqlite,
 };
 
-use crate::org::{DatabasePool, contexts::ContextId, rooms::schema::rooms};
+use crate::org::{Database, contexts::ContextId, rooms::schema::rooms};
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
 pub struct RoomId(i32);
@@ -35,7 +35,7 @@ struct NewRoom {
 
 impl Room {
     pub fn get_or_create(
-        pool: &DatabasePool,
+        pool: &Database,
         m_room_id: String,
         m_room_homeserver: String,
     ) -> Result<Room, Box<dyn Error>> {
@@ -59,7 +59,7 @@ impl Room {
 
     pub fn set_context_id(
         &mut self,
-        pool: &DatabasePool,
+        pool: &Database,
         context_id: Option<ContextId>,
     ) -> Result<(), Box<dyn Error>> {
         let mut conn = pool.get().unwrap();

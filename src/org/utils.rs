@@ -6,7 +6,7 @@ use diesel::{
 };
 
 use crate::org::{
-    DatabasePool, context_permissions::context_permissions, group_users::group_users,
+    Database, context_permissions::context_permissions, group_users::group_users,
     permissions::permissions, rooms::rooms, users::users,
 };
 
@@ -19,7 +19,7 @@ diesel::allow_tables_to_appear_in_same_query!(
 );
 
 pub fn user_has_permission(
-    pool: &DatabasePool,
+    pool: &Database,
     m_user_id: &str,
     m_user_homeserver: &str,
     m_room_id: &str,

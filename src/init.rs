@@ -3,6 +3,7 @@ use matrix_sdk::Client;
 use tracing::*;
 
 use crate::{
+    commands,
     config::{self, ConfigSerde, data::DataConfig},
     org::Database,
 };
@@ -26,4 +27,7 @@ pub fn init(client: &Client) {
         .unwrap()
         .len();
     debug!("Successfully ran {migrations_count} migrations");
+
+    // register commands
+    commands::register(client);
 }

@@ -7,7 +7,7 @@ use diesel::{
     sqlite::Sqlite,
 };
 
-use crate::org::{DatabasePool, users::schema::users};
+use crate::org::{Database, users::schema::users};
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
 pub struct UserId(i32);
@@ -34,7 +34,7 @@ struct NewUser {
 
 impl User {
     pub fn get_or_create(
-        pool: &DatabasePool,
+        pool: &Database,
         m_user_id: String,
         m_user_homeserver: String,
     ) -> Result<User, Box<dyn Error>> {

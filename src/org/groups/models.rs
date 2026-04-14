@@ -6,7 +6,7 @@ use diesel::{
 };
 use std::error::Error;
 
-use crate::org::{DatabasePool, users::UserId};
+use crate::org::{Database, users::UserId};
 
 use super::schema::groups;
 
@@ -40,7 +40,7 @@ struct NewGroup {
 
 impl Group {
     pub fn create_new(
-        pool: &DatabasePool,
+        pool: &Database,
         name: String,
         owner_id: UserId,
     ) -> Result<Self, Box<dyn Error>> {
@@ -56,7 +56,7 @@ impl Group {
 
     pub fn change_owner(
         &mut self,
-        pool: &DatabasePool,
+        pool: &Database,
         owner_id: UserId,
     ) -> Result<(), Box<dyn Error>> {
         let mut conn = pool.get().unwrap();
@@ -72,7 +72,7 @@ impl Group {
 
     pub fn change_admin_group(
         &mut self,
-        pool: &DatabasePool,
+        pool: &Database,
         admin_group_id: Option<GroupId>,
     ) -> Result<(), Box<dyn Error>> {
         let mut conn = pool.get().unwrap();
@@ -86,7 +86,7 @@ impl Group {
         Ok(())
     }
 
-    pub fn delete(self, pool: &DatabasePool) -> Result<(), Box<dyn Error>> {
+    pub fn delete(self, pool: &Database) -> Result<(), Box<dyn Error>> {
         let mut conn = pool.get().unwrap();
 
         diesel::delete(FindDsl::find(groups::table, self.group_id)).execute(&mut conn)?;
@@ -96,7 +96,7 @@ impl Group {
 
     /// - Ok(Some) if found
     /// - Ok(None) if not found
-    pub fn find(pool: &DatabasePool, group_id: GroupId) -> Result<Option<Self>, Box<dyn Error>> {
+    pub fn find(pool: &Database, group_id: GroupId) -> Result<Option<Self>, Box<dyn Error>> {
         let mut conn = pool.get().unwrap();
 
         match QueryDsl::find(groups::table, group_id)
