@@ -1,16 +1,42 @@
 use evalexpr::{Node, build_operator_tree, context_map};
 use serde::Deserialize;
 
-use crate::config::ConfigDe;
+use crate::config::{ConfigDe, ConfigDefault};
 
 #[derive(Deserialize, Clone, Default)]
 pub struct HandlersConfig {
     #[serde(rename = "on-invite")]
     pub on_invite: OnInviteHandlerConfig,
+    #[serde(rename = "on-command")]
+    pub on_command: OnCommandHandlerConfig,
+}
+
+impl ConfigDefault for HandlersConfig {
+    const DEFAULT_STR: &str = r#"[on-invite]
+initial-delay = 2.0
+retry-delay = "prev * 2"
+retry-condition = "n < 10"
+
+[on-command]
+prefix = "."
+""#;
 }
 
 impl ConfigDe for HandlersConfig {
     const PATH: &'static str = "handlers";
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct OnCommandHandlerConfig {
+    pub prefix: String,
+}
+
+impl Default for OnCommandHandlerConfig {
+    fn default() -> Self {
+        Self {
+            prefix: ".".to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -28,7 +54,7 @@ impl Default for OnInviteHandlerConfig {
         Self {
             initial_delay: 2.0,
             retry_delay: build_operator_tree("prev * 2").unwrap(),
-            retry_condition: build_operator_tree("n > 10").unwrap(),
+            retry_condition: build_operator_tree("n < 10").unwrap(),
         }
     }
 }

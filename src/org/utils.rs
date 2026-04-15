@@ -6,7 +6,7 @@ use diesel::{
 };
 
 use crate::org::{
-    Database, context_permissions::context_permissions, group_users::group_users,
+    DatabaseConnection, context_permissions::context_permissions, group_users::group_users,
     permissions::permissions, rooms::rooms, users::users,
 };
 
@@ -19,15 +19,13 @@ diesel::allow_tables_to_appear_in_same_query!(
 );
 
 pub fn user_has_permission(
-    pool: &Database,
+    conn: &mut DatabaseConnection,
     m_user_id: &str,
     m_user_homeserver: &str,
     m_room_id: &str,
     m_room_homeserver: &str,
     permission_qualifier: &str,
 ) -> Result<Option<bool>, Box<dyn Error>> {
-    let mut conn = pool.get().unwrap();
-
     let user_groups = users::table
         .inner_join(group_users::table.on(group_users::user_id.eq(users::user_id)))
         .filter(users::m_user_id.eq(m_user_id))
@@ -52,6 +50,6 @@ pub fn user_has_permission(
         .order_by(context_permissions::priority.asc())
         .then_order_by(context_permissions::permission_id.asc())
         .select(context_permissions::allowed)
-        .first::<bool>(&mut conn)
+        .first::<bool>(conn)
         .optional()?)
 }

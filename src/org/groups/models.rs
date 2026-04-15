@@ -6,7 +6,7 @@ use diesel::{
 };
 use std::error::Error;
 
-use crate::org::{Database, users::UserId};
+use crate::org::{DatabaseConnection, users::UserId};
 
 use super::schema::groups;
 
@@ -40,30 +40,26 @@ struct NewGroup {
 
 impl Group {
     pub fn create_new(
-        pool: &Database,
+        conn: &mut DatabaseConnection,
         name: String,
         owner_id: UserId,
     ) -> Result<Self, Box<dyn Error>> {
         let new_group = NewGroup { name, owner_id };
 
-        let mut conn = pool.get().unwrap();
-
         Ok(diesel::insert_into(groups::table)
             .values(&new_group)
             .returning(Group::as_returning())
-            .get_result(&mut conn)?)
+            .get_result(conn)?)
     }
 
     pub fn change_owner(
         &mut self,
-        pool: &Database,
+        conn: &mut DatabaseConnection,
         owner_id: UserId,
     ) -> Result<(), Box<dyn Error>> {
-        let mut conn = pool.get().unwrap();
-
         diesel::update(&*self)
             .set(groups::owner_id.eq(&owner_id))
-            .execute(&mut conn)?;
+            .execute(conn)?;
 
         self.owner_id = owner_id;
 
@@ -72,36 +68,33 @@ impl Group {
 
     pub fn change_admin_group(
         &mut self,
-        pool: &Database,
+        conn: &mut DatabaseConnection,
         admin_group_id: Option<GroupId>,
     ) -> Result<(), Box<dyn Error>> {
-        let mut conn = pool.get().unwrap();
-
         diesel::update(&*self)
             .set(groups::admin_group_id.eq(&admin_group_id))
-            .execute(&mut conn)?;
+            .execute(conn)?;
 
         self.admin_group_id = admin_group_id;
 
         Ok(())
     }
 
-    pub fn delete(self, pool: &Database) -> Result<(), Box<dyn Error>> {
-        let mut conn = pool.get().unwrap();
-
-        diesel::delete(FindDsl::find(groups::table, self.group_id)).execute(&mut conn)?;
+    pub fn delete(self, conn: &mut DatabaseConnection) -> Result<(), Box<dyn Error>> {
+        diesel::delete(FindDsl::find(groups::table, self.group_id)).execute(conn)?;
 
         Ok(())
     }
 
     /// - Ok(Some) if found
     /// - Ok(None) if not found
-    pub fn find(pool: &Database, group_id: GroupId) -> Result<Option<Self>, Box<dyn Error>> {
-        let mut conn = pool.get().unwrap();
-
+    pub fn find(
+        conn: &mut DatabaseConnection,
+        group_id: GroupId,
+    ) -> Result<Option<Self>, Box<dyn Error>> {
         match QueryDsl::find(groups::table, group_id)
             .select(Group::as_select())
-            .first(&mut conn)
+            .first(conn)
         {
             Ok(group) => Ok(Some(group)),
             Err(diesel::NotFound) => Ok(None),

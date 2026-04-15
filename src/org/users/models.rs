@@ -7,7 +7,7 @@ use diesel::{
     sqlite::Sqlite,
 };
 
-use crate::org::{Database, users::schema::users};
+use crate::org::{DatabaseConnection, users::schema::users};
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
 pub struct UserId(i32);
@@ -34,7 +34,7 @@ struct NewUser {
 
 impl User {
     pub fn get_or_create(
-        pool: &Database,
+        conn: &mut DatabaseConnection,
         m_user_id: String,
         m_user_homeserver: String,
     ) -> Result<User, Box<dyn Error>> {
@@ -43,16 +43,14 @@ impl User {
             m_user_homeserver,
         };
 
-        let mut conn = pool.get().unwrap();
-
         diesel::insert_into(users::table)
             .values(&new_user)
             .on_conflict_do_nothing()
-            .execute(&mut conn)?;
+            .execute(conn)?;
 
         Ok(users::table
             .filter(users::m_user_id.eq(new_user.m_user_id))
             .filter(users::m_user_homeserver.eq(new_user.m_user_homeserver))
-            .first(&mut conn)?)
+            .first(conn)?)
     }
 }

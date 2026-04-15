@@ -6,7 +6,7 @@ use diesel::{
     sqlite::Sqlite,
 };
 
-use crate::org::{Database, contexts::schema::contexts, groups::GroupId, users::UserId};
+use crate::org::{DatabaseConnection, contexts::schema::contexts, groups::GroupId, users::UserId};
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
 pub struct ContextId(i32);
@@ -38,7 +38,7 @@ struct NewContext {
 
 impl Context {
     pub fn create_new(
-        pool: &Database,
+        conn: &mut DatabaseConnection,
         name: String,
         description: String,
         owner_id: UserId,
@@ -49,11 +49,9 @@ impl Context {
             owner_id,
         };
 
-        let mut conn = pool.get().unwrap();
-
         Ok(diesel::insert_into(contexts::table)
             .values(new_context)
             .returning(Context::as_returning())
-            .get_result(&mut conn)?)
+            .get_result(conn)?)
     }
 }

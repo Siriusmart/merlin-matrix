@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, error::Error, sync::OnceLock};
 
 use matrix_sdk::{
     Client, Room, async_trait, ruma::events::room::message::OriginalSyncRoomMessageEvent,
@@ -9,6 +9,7 @@ pub struct CmdContext {
     pub client: Client,
     pub event: OriginalSyncRoomMessageEvent,
     pub room: Room,
+    pub args: Vec<String>,
 }
 
 /// A command is a similar to a binary on Unix, it is invokable, and
@@ -23,30 +24,28 @@ pub trait Cmd: Sync + Send {
     fn default_permission(&self) -> bool;
 
     /// run the command
-    async fn invoke(&self, context: CmdContext);
+    async fn invoke(&self, context: CmdContext) -> Result<(), Box<dyn Error>>;
 }
 
-#[derive(Clone)]
-pub struct CmdIndex(Arc<CmdIndexInner>);
-pub struct CmdIndexInner(HashMap<String, Box<dyn Cmd>>);
+static CMD_INDEX: OnceLock<CmdIndex> = OnceLock::new();
 
-impl CmdIndexInner {
+pub struct CmdIndex(HashMap<String, Box<dyn Cmd>>);
+
+impl CmdIndex {
     pub fn register<C: Cmd + 'static>(&mut self, name: &'static str, cmd: C) {
         self.0.insert(name.to_string(), Box::new(cmd));
     }
 
-    pub fn get(&self, name: &str) -> Option<&dyn Cmd> {
-        self.0.get(name).map(Box::as_ref)
+    pub fn get(name: &str) -> Option<&dyn Cmd> {
+        CMD_INDEX.get().unwrap().0.get(name).map(Box::as_ref)
     }
 
-    pub fn lock(self) -> CmdIndex {
-        CmdIndex(Arc::new(self))
+    pub fn lock(self) {
+        let _ = CMD_INDEX.set(self);
     }
-}
 
-impl CmdIndex {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new() -> CmdIndexInner {
-        CmdIndexInner(HashMap::new())
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self(HashMap::new())
     }
 }

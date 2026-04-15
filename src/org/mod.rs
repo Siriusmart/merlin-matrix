@@ -15,9 +15,9 @@ pub mod users;
 
 pub mod utils;
 
-type DatabaseBackend = SqliteConnection;
-type DatabasePool = Pool<ConnectionManager<DatabaseBackend>>;
-type DatabaseConnection = PooledConnection<ConnectionManager<DatabaseBackend>>;
+pub type DatabaseBackend = SqliteConnection;
+pub type DatabasePool = Pool<ConnectionManager<DatabaseBackend>>;
+pub type DatabaseConnection = PooledConnection<ConnectionManager<DatabaseBackend>>;
 
 /// connection to the sqlite database
 #[derive(Clone)]

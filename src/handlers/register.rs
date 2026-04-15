@@ -9,5 +9,5 @@ pub fn first_sync(client: &Client) {
 
 /// these listeners will be registered after the first sync
 pub fn following_syncs(client: &Client) {
-    client.add_event_handler(on_new_message::on_new_message);
+    client.add_event_handler(on_maybe_command::on_maybe_command);
 }

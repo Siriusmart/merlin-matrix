@@ -56,3 +56,23 @@ pub trait ConfigSerde: Serialize + ConfigDe {
         }
     }
 }
+
+pub trait ConfigDefault: ConfigDe {
+    const DEFAULT_STR: &str;
+
+    fn load_write() -> Result<Self, Box<dyn Error>> {
+        let path = Self::path();
+
+        if path.exists() {
+            Self::load()
+        } else {
+            if !path.parent().unwrap().exists() {
+                fs::create_dir_all(path.parent().unwrap())?;
+            }
+
+            fs::write(path, Self::DEFAULT_STR)?;
+
+            Self::load()
+        }
+    }
+}

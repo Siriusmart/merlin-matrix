@@ -1,5 +1,14 @@
 mod cmd;
 mod entry;
-mod register;
 
-pub use register::register;
+pub use cmd::*;
+pub use entry::on_command;
+use matrix_sdk::Client;
+
+mod core;
+
+pub fn register(_client: &Client) {
+    let mut index = CmdIndex::new();
+    core::register(&mut index);
+    index.lock();
+}

@@ -7,7 +7,7 @@ use diesel::{
     sqlite::Sqlite,
 };
 
-use crate::org::{Database, contexts::ContextId, rooms::schema::rooms};
+use crate::org::{DatabaseConnection, contexts::ContextId, rooms::schema::rooms};
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
 pub struct RoomId(i32);
@@ -35,7 +35,7 @@ struct NewRoom {
 
 impl Room {
     pub fn get_or_create(
-        pool: &Database,
+        conn: &mut DatabaseConnection,
         m_room_id: String,
         m_room_homeserver: String,
     ) -> Result<Room, Box<dyn Error>> {
@@ -44,29 +44,25 @@ impl Room {
             m_room_homeserver,
         };
 
-        let mut conn = pool.get().unwrap();
-
         diesel::insert_into(rooms::table)
             .values(&new_room)
             .on_conflict_do_nothing()
-            .execute(&mut conn)?;
+            .execute(conn)?;
 
         Ok(rooms::table
             .filter(rooms::m_room_id.eq(new_room.m_room_id))
             .filter(rooms::m_room_homeserver.eq(new_room.m_room_homeserver))
-            .first(&mut conn)?)
+            .first(conn)?)
     }
 
     pub fn set_context_id(
         &mut self,
-        pool: &Database,
+        conn: &mut DatabaseConnection,
         context_id: Option<ContextId>,
     ) -> Result<(), Box<dyn Error>> {
-        let mut conn = pool.get().unwrap();
-
         diesel::update(&*self)
             .set(rooms::context_id.eq(&context_id))
-            .execute(&mut conn)?;
+            .execute(conn)?;
 
         self.context_id = context_id;
 
