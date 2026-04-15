@@ -9,7 +9,7 @@ use diesel::{
 
 use crate::org::{DatabaseConnection, contexts::ContextId, rooms::schema::rooms};
 
-#[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
+#[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct RoomId(i32);
 
 /// a room that has information stored about it

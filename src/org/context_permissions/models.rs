@@ -9,7 +9,7 @@ use crate::org::{
     permissions::PermissionId,
 };
 
-#[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
+#[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ContextPermissionPriority(i32);
 
 /// value of a permission in a context

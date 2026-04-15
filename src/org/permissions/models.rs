@@ -4,7 +4,7 @@ use diesel::{
     sqlite::Sqlite,
 };
 
-#[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
+#[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct PermissionId(i32);
 
 #[derive(Selectable, Queryable, Insertable, Identifiable)]

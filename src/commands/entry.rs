@@ -77,20 +77,15 @@ pub async fn on_command(
         event.sender.server_name().as_str()
     );
 
-    let res = cmd
-        .invoke(CmdContext {
-            client,
-            event: event.clone(),
-            room: room.clone(),
-            args: args.clone(),
-        })
-        .await;
+    let context = CmdContext::new(client, event, room.clone(), args.clone());
+
+    let res = cmd.invoke(context.clone()).await;
 
     if let Err(e) = res {
         error!(
             "Command {e} args={args:?} user={}:{} room={room_localpart}:{room_homeserver}",
-            event.sender.localpart(),
-            event.sender.server_name().as_str()
+            context.event.sender.localpart(),
+            context.event.sender.server_name().as_str()
         )
     }
 }

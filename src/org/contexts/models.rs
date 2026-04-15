@@ -8,7 +8,7 @@ use diesel::{
 
 use crate::org::{DatabaseConnection, contexts::schema::contexts, groups::GroupId, users::UserId};
 
-#[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
+#[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ContextId(i32);
 
 /// represents a single context, contexts are permission

@@ -1,11 +1,43 @@
-use std::{collections::HashMap, error::Error, sync::OnceLock};
+use std::{
+    collections::HashMap,
+    error::Error,
+    ops::Deref,
+    sync::{Arc, OnceLock},
+};
 
 use matrix_sdk::{
     Client, Room, async_trait, ruma::events::room::message::OriginalSyncRoomMessageEvent,
 };
 
 /// event information passed to the command program
-pub struct CmdContext {
+#[derive(Clone)]
+pub struct CmdContext(Arc<CmdContextInner>);
+
+impl CmdContext {
+    pub fn new(
+        client: Client,
+        event: OriginalSyncRoomMessageEvent,
+        room: Room,
+        args: Vec<String>,
+    ) -> Self {
+        Self(Arc::new(CmdContextInner {
+            client,
+            event,
+            room,
+            args,
+        }))
+    }
+}
+
+impl Deref for CmdContext {
+    type Target = CmdContextInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct CmdContextInner {
     pub client: Client,
     pub event: OriginalSyncRoomMessageEvent,
     pub room: Room,
@@ -33,7 +65,9 @@ pub struct CmdIndex(HashMap<String, Box<dyn Cmd>>);
 
 impl CmdIndex {
     pub fn register<C: Cmd + 'static>(&mut self, name: &'static str, cmd: C) {
-        self.0.insert(name.to_string(), Box::new(cmd));
+        if self.0.insert(name.to_string(), Box::new(cmd)).is_some() {
+            panic!("Command clash: name={name}")
+        }
     }
 
     pub fn get(name: &str) -> Option<&dyn Cmd> {

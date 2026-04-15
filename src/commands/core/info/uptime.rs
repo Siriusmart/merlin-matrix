@@ -3,7 +3,7 @@ use std::{error::Error, time::Instant};
 use matrix_sdk::{async_trait, ruma::events::room::message::RoomMessageEventContent};
 use tracing::instrument;
 
-use crate::commands::{Cmd, CmdContext};
+use crate::commands::{Cmd, CmdContext, utils};
 
 pub struct CmdUptime(Instant);
 
@@ -60,8 +60,11 @@ impl Cmd for CmdUptime {
             }
         };
 
-        let res = RoomMessageEventContent::text_html(res_body, res_html);
-        context.room.send(res).await?;
+        utils::reply_to(
+            &context,
+            RoomMessageEventContent::text_html(res_body, res_html),
+        )
+        .await?;
 
         Ok(())
     }

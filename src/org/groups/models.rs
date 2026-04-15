@@ -10,7 +10,7 @@ use crate::org::{DatabaseConnection, users::UserId};
 
 use super::schema::groups;
 
-#[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
+#[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct GroupId(i32);
 
 /// - The user creating the group is by default the owner, ownership can be transferred
@@ -92,7 +92,25 @@ impl Group {
         conn: &mut DatabaseConnection,
         group_id: GroupId,
     ) -> Result<Option<Self>, Box<dyn Error>> {
-        match QueryDsl::find(groups::table, group_id)
+        match groups::table
+            .filter(groups::group_id.eq(group_id))
+            .select(Group::as_select())
+            .first(conn)
+        {
+            Ok(group) => Ok(Some(group)),
+            Err(diesel::NotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    /// - Ok(Some) if found
+    /// - Ok(None) if not found
+    pub fn find_by_name(
+        conn: &mut DatabaseConnection,
+        name: &str,
+    ) -> Result<Option<Self>, Box<dyn Error>> {
+        match groups::table
+            .filter(groups::name.eq(name))
             .select(Group::as_select())
             .first(conn)
         {

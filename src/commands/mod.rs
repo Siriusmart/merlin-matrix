@@ -1,8 +1,11 @@
 mod cmd;
 mod entry;
+mod utils;
+mod editable_message;
 
 pub use cmd::*;
 pub use entry::on_command;
+pub use editable_message::EditableMessage;
 use matrix_sdk::Client;
 
 mod core;

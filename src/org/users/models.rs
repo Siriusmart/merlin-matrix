@@ -9,7 +9,7 @@ use diesel::{
 
 use crate::org::{DatabaseConnection, users::schema::users};
 
-#[derive(DieselNewType, Debug, Hash, PartialEq, Eq)]
+#[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct UserId(i32);
 
 /// A user is added to database on demand when it is used in
@@ -30,6 +30,12 @@ pub struct User {
 struct NewUser {
     m_user_id: String,
     m_user_homeserver: String,
+}
+
+impl User {
+    pub fn id(&self) -> UserId {
+        self.user_id
+    }
 }
 
 impl User {
