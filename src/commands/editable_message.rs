@@ -9,6 +9,7 @@ use matrix_sdk::{
 
 use crate::commands::{CmdContext, utils::reply_to};
 
+/// a sent message that can be easily edited
 pub struct EditableMessage {
     plain_buffer: Vec<String>,
     html_buffer: Vec<String>,

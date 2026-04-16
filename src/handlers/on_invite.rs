@@ -1,13 +1,17 @@
 use std::time::Duration;
 
 use matrix_sdk::{
-    Client, Room, event_handler::Ctx, ruma::events::room::member::StrippedRoomMemberEvent,
-    sleep::sleep,
+    Client, Room, RoomMemberships, event_handler::Ctx,
+    ruma::events::room::member::StrippedRoomMemberEvent, sleep::sleep,
 };
 use tracing::*;
 
-use crate::config::handlers::OnInviteHandlerConfig;
+use crate::{
+    config::handlers::OnInviteHandlerConfig,
+    org::{Database, users::User},
+};
 
+/// On invited to room, accept it
 #[instrument(skip_all)]
 pub async fn on_invite(
     room_member: StrippedRoomMemberEvent,
@@ -46,6 +50,38 @@ pub async fn on_invite(
             }
 
             info!("Accepted invite to room_id={}", room.room_id());
+
+            let members = match room.members(RoomMemberships::JOIN).await {
+                Ok(m) => m,
+                Err(e) => {
+                    error!(
+                        "Failed to fetch member list for room_id{} reason={e:?}",
+                        room.room_id()
+                    );
+                    return;
+                }
+            };
+
+            let mut conn = Database::conn();
+
+            for member in members {
+                if member.user_id() == client.user_id().unwrap() {
+                    continue;
+                }
+
+                let res = User::ensure_created(
+                    &mut conn,
+                    member.user_id().localpart().to_string(),
+                    member.user_id().server_name().to_string(),
+                );
+
+                if let Err(err) = res {
+                    error!(
+                        "Could not create user for m_user_id={} reason={err:?}",
+                        member.user_id()
+                    )
+                }
+            }
         }
         .in_current_span(),
     );

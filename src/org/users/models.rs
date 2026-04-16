@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use diesel::{
-    ExpressionMethods, RunQueryDsl, Selectable,
+    ExpressionMethods, OptionalExtension, RunQueryDsl, Selectable,
     prelude::{Identifiable, Insertable, Queryable},
     query_dsl::methods::FilterDsl,
     sqlite::Sqlite,
@@ -14,7 +14,7 @@ pub struct UserId(i32);
 
 /// A user is added to database on demand when it is used in
 /// another database table
-#[derive(Selectable, Queryable, Insertable, Identifiable)]
+#[derive(Selectable, Queryable, Insertable, Identifiable, Hash, PartialEq, Eq)]
 #[diesel(check_for_backend(Sqlite))]
 #[diesel(table_name = super::schema::users)]
 #[diesel(primary_key(user_id))]
@@ -36,27 +36,56 @@ impl User {
     pub fn id(&self) -> UserId {
         self.user_id
     }
+
+    pub fn m_id(&self) -> &str {
+        &self.m_user_id
+    }
+
+    pub fn m_homeserver(&self) -> &str {
+        &self.m_user_homeserver
+    }
 }
 
 impl User {
+    pub fn get(
+        conn: &mut DatabaseConnection,
+        m_user_id: &str,
+        m_user_homeserver: &str,
+    ) -> Result<Option<User>, Box<dyn Error>> {
+        Ok(users::table
+            .filter(users::m_user_id.eq(m_user_id))
+            .filter(users::m_user_homeserver.eq(m_user_homeserver))
+            .first(conn)
+            .optional()?)
+    }
+
     pub fn get_or_create(
         conn: &mut DatabaseConnection,
         m_user_id: String,
         m_user_homeserver: String,
     ) -> Result<User, Box<dyn Error>> {
-        let new_user = NewUser {
-            m_user_id,
-            m_user_homeserver,
-        };
-
-        diesel::insert_into(users::table)
-            .values(&new_user)
-            .on_conflict_do_nothing()
-            .execute(conn)?;
+        Self::ensure_created(conn, m_user_id.clone(), m_user_homeserver.clone())?;
 
         Ok(users::table
-            .filter(users::m_user_id.eq(new_user.m_user_id))
-            .filter(users::m_user_homeserver.eq(new_user.m_user_homeserver))
+            .filter(users::m_user_id.eq(m_user_id))
+            .filter(users::m_user_homeserver.eq(m_user_homeserver))
             .first(conn)?)
+    }
+
+    /// create if not already exist, otherwise do nothing
+    pub fn ensure_created(
+        conn: &mut DatabaseConnection,
+        m_user_id: String,
+        m_user_homeserver: String,
+    ) -> Result<(), Box<dyn Error>> {
+        diesel::insert_into(users::table)
+            .values(&NewUser {
+                m_user_id,
+                m_user_homeserver,
+            })
+            .on_conflict((users::m_user_id, users::m_user_homeserver))
+            .do_nothing()
+            .execute(conn)?;
+        Ok(())
     }
 }

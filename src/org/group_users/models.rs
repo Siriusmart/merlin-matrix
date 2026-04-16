@@ -16,3 +16,9 @@ pub struct GroupUser {
     user_id: UserId,
     group_id: GroupId,
 }
+
+impl GroupUser {
+    pub fn new(user_id: UserId, group_id: GroupId) -> Self {
+        Self { user_id, group_id }
+    }
+}

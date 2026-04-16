@@ -8,6 +8,7 @@ use tracing::*;
 
 use crate::{commands::on_command, config::handlers::OnCommandHandlerConfig};
 
+/// on message: runs the command if it is a command
 #[instrument(skip_all)]
 pub async fn on_maybe_command(
     event: OriginalSyncRoomMessageEvent,
@@ -18,6 +19,7 @@ pub async fn on_maybe_command(
     if room.state() != RoomState::Joined {
         return;
     }
+
     if event.sender == client.user_id().unwrap() {
         return;
     }

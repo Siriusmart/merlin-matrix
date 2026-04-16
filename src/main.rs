@@ -45,13 +45,16 @@ async fn main() {
         homeserver = creds.homeserver()
     );
 
-    handlers::register::first_sync(&client);
+    handlers::first_sync(&client);
 
     debug!("Starting first sync");
     let response = client.sync_once(SyncSettings::default()).await.unwrap();
-    debug!("First sync completed");
+    debug!("First sync completed, running on_ready tasks");
 
-    handlers::register::following_syncs(&client);
+    handlers::on_ready(&client).await;
+    debug!("Finished on_ready tasks");
+
+    handlers::following_syncs(&client);
 
     debug!("Started indefinite syncing");
     client

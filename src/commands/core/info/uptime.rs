@@ -46,7 +46,7 @@ impl Cmd for CmdUptime {
             ),
             chunks => {
                 let time_string = chunks
-                    .into_iter()
+                    .iter()
                     .map(|(unit, value)| {
                         format!("{value} {unit}{}", if *value > 1 { "s" } else { "" })
                     })

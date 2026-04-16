@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{ConfigDe, ConfigSerde};
 
+/// Data storgae
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DataConfig {
     sqlite_db_path: PathBuf,

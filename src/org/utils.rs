@@ -1,13 +1,18 @@
 use std::error::Error;
 
 use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl,
-    RunQueryDsl, SqliteExpressionMethods,
+    ExpressionMethods, Insertable, JoinOnDsl, NullableExpressionMethods, OptionalExtension,
+    QueryDsl, RunQueryDsl, SqliteExpressionMethods,
 };
 
 use crate::org::{
-    DatabaseConnection, context_permissions::context_permissions, group_users::group_users,
-    permissions::permissions, rooms::rooms, users::users,
+    DatabaseConnection,
+    context_permissions::context_permissions,
+    group_users::{GroupUser, group_users},
+    groups::GroupId,
+    permissions::permissions,
+    rooms::rooms,
+    users::{UserId, users},
 };
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -18,6 +23,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     permissions,
 );
 
+/// check if user has a specified permission in a context
 pub fn user_has_permission(
     conn: &mut DatabaseConnection,
     m_user_id: &str,
@@ -52,4 +58,19 @@ pub fn user_has_permission(
         .select(context_permissions::allowed)
         .first::<bool>(conn)
         .optional()?)
+}
+
+/// add user to group, return Ok(true) is user is previously not in group and now added to group
+pub fn add_user_to_group(
+    conn: &mut DatabaseConnection,
+    user_id: UserId,
+    group_id: GroupId,
+) -> Result<bool, Box<dyn Error>> {
+    let inserted = diesel::insert_into(group_users::table)
+        .values(&GroupUser::new(user_id, group_id))
+        .on_conflict((group_users::user_id, group_users::group_id))
+        .do_nothing()
+        .execute(conn)?;
+
+    Ok(inserted != 0)
 }

@@ -26,6 +26,7 @@ pub struct GroupId(i32);
 pub struct Group {
     group_id: GroupId,
     name: String,
+    description: String,
     owner_id: UserId,
     admin_group_id: Option<GroupId>,
 }
@@ -35,16 +36,35 @@ pub struct Group {
 #[diesel(check_for_backend(Sqlite))]
 struct NewGroup {
     name: String,
+    description: String,
     owner_id: UserId,
+    admin_group_id: Option<GroupId>,
+}
+
+impl Group {
+    pub fn id(&self) -> GroupId {
+        self.group_id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 impl Group {
     pub fn create_new(
         conn: &mut DatabaseConnection,
         name: String,
+        description: String,
         owner_id: UserId,
+        admin_group_id: Option<GroupId>,
     ) -> Result<Self, Box<dyn Error>> {
-        let new_group = NewGroup { name, owner_id };
+        let new_group = NewGroup {
+            name,
+            description,
+            owner_id,
+            admin_group_id,
+        };
 
         Ok(diesel::insert_into(groups::table)
             .values(&new_group)
@@ -118,5 +138,16 @@ impl Group {
             Err(diesel::NotFound) => Ok(None),
             Err(err) => Err(err.into()),
         }
+    }
+
+    pub fn validate_name(name: &str) -> bool {
+        name.split('.').all(|chunk| !chunk.is_empty())
+            && name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+    }
+
+    pub fn desc_max_len() -> usize {
+        150
     }
 }

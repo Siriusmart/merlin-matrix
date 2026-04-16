@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{ConfigDe, ConfigSerde};
 
+/// Login credentials
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CredsConfig {
     homeserver: String,

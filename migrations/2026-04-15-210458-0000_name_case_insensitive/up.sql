@@ -21,3 +21,5 @@ DROP TABLE groups;
 ALTER TABLE groups_new RENAME TO groups;
 
 PRAGMA foreign_key_check;
+
+PRAGMA foreign_keys = ON;

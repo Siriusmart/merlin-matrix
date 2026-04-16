@@ -3,6 +3,7 @@ use serde::Deserialize;
 
 use crate::config::{ConfigDe, ConfigDefault};
 
+/// event handlers behaviour
 #[derive(Deserialize, Clone, Default)]
 pub struct HandlersConfig {
     #[serde(rename = "on-invite")]
@@ -41,10 +42,13 @@ impl Default for OnCommandHandlerConfig {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct OnInviteHandlerConfig {
+    /// how much delay before retrying on first failed accepting
     #[serde(rename = "initial-delay")]
     initial_delay: f64,
+    /// how long before trying to accept invite again (variables: n, prev)
     #[serde(rename = "retry-delay")]
     retry_delay: Node,
+    /// boolean expression on whether should continue retrying (variables: n, delay)
     #[serde(rename = "retry-condition")]
     retry_condition: Node,
 }

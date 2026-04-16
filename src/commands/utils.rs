@@ -1,14 +1,11 @@
 use std::error::Error;
 
-use clap::Parser;
+use clap::{Parser, error::ErrorKind};
 use matrix_sdk::{
-    room::{edit::EditedContent, futures::SendMessageLikeEventResult},
+    room::futures::SendMessageLikeEventResult,
     ruma::events::{
         OriginalMessageLikeEvent,
-        room::message::{
-            AddMentions, ForwardThread, RoomMessageEventContent,
-            RoomMessageEventContentWithoutRelation,
-        },
+        room::message::{AddMentions, ForwardThread, RoomMessageEventContent},
     },
 };
 
@@ -18,9 +15,20 @@ use crate::commands::CmdContext;
 pub async fn arg_parse<P: Parser>(context: &CmdContext) -> Result<Option<P>, Box<dyn Error>> {
     Ok(match P::try_parse_from(&context.args) {
         Ok(p) => Some(p),
+        Err(err)
+            if matches!(
+                err.kind(),
+                ErrorKind::DisplayHelp | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+            ) =>
+        {
+            let res =
+                RoomMessageEventContent::text_html(err.to_string(), format!("<pre>{err}</pre>"));
+            reply_to(context, res).await?;
+            None
+        }
         Err(err) => {
             let res = RoomMessageEventContent::text_plain(err.to_string());
-            context.room.send(res).await?;
+            reply_to(context, res).await?;
             None
         }
     })
@@ -44,4 +52,3 @@ pub async fn reply_to(
     let res = content.make_reply_to(&full_event, ForwardThread::Yes, AddMentions::Yes);
     Ok((context.room.send(res).await?, full_event))
 }
-
