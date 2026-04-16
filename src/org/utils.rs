@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use diesel::{
-    ExpressionMethods, Insertable, JoinOnDsl, NullableExpressionMethods, OptionalExtension,
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension,
     QueryDsl, RunQueryDsl, SqliteExpressionMethods,
 };
 

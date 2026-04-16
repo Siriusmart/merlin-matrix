@@ -1,11 +1,19 @@
 use std::{error::Error, time::Instant};
 
+use clap::Parser;
 use matrix_sdk::{async_trait, ruma::events::room::message::RoomMessageEventContent};
 use tracing::instrument;
 
-use crate::commands::{Cmd, CmdContext, utils};
+use crate::commands::{
+    Cmd, CmdContext,
+    utils::{self, arg_parse},
+};
 
 pub struct CmdUptime(Instant);
+
+#[derive(Parser)]
+#[command(name = "Uptime", version = "0.1.0", about = "Get bot uptime")]
+struct CmdUptimeArg;
 
 impl CmdUptime {
     pub fn new() -> Self {
@@ -25,6 +33,10 @@ impl Cmd for CmdUptime {
 
     #[instrument(skip_all)]
     async fn invoke(&self, context: CmdContext) -> Result<(), Box<dyn Error>> {
+        if arg_parse::<CmdUptimeArg>(&context).await?.is_none() {
+            return Ok(());
+        }
+
         let total_secs = self.0.elapsed().as_secs();
         let units = [
             ("day", total_secs / 60 / 60 / 24),
