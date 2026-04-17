@@ -25,8 +25,7 @@ pub struct CmdGroupMod;
 #[command(
     name = "GroupMod",
     version = "0.1.0",
-    about = "Modify an existing group",
-    arg_required_else_help = true
+    about = "Modify an existing group"
 )]
 struct CmdGroupModArg {
     /// Current name of the group
@@ -47,7 +46,7 @@ struct CmdGroupModArg {
     #[arg(long = "remove-admin")]
     remove_admin: bool,
     /// A list of @users to add as members of the group, use -u multiple times to add more users
-    #[arg(short = 'u', long = "users")]
+    #[arg(short = 'u', long = "user")]
     add_users: Vec<String>,
     /// A list of @users to remove from members of the group, use -r multiple times to remove more users
     #[arg(short = 'r', long = "remove")]
@@ -76,8 +75,26 @@ impl Cmd for CmdGroupMod {
             return Ok(());
         };
 
-        let mut conn = Database::conn();
         let mut printer = MessagePrinter::new(context.clone());
+
+        if args.new_name.is_none()
+            && args.new_desc.is_none()
+            && args.new_owner.is_none()
+            && args.new_admin_group.is_none()
+            && !args.remove_admin
+            && args.add_users.is_empty()
+            && args.remove_users.is_empty()
+        {
+            printer
+                .println(
+                    "Nothing to change: no options provided",
+                    "Nothing to change: no options provided",
+                )
+                .await?;
+            return Ok(());
+        }
+
+        let mut conn = Database::conn();
 
         let Some(group_to_modify) = Group::find_by_name(&mut conn, &args.group)? else {
             printer
@@ -181,17 +198,26 @@ impl Cmd for CmdGroupMod {
         }
 
         if let Some(desc) = &args.new_desc
-            && Group::desc_max_len() < desc.len() {
-                utils::reply_to(
-                    &context,
-                    RoomMessageEventContent::text_html(
-                        format!("Description length must be less than {}, current length: {}", Group::desc_max_len(), desc.len()),
-                        format!("Description length must be less than <b>{}</b>, current length: <b>{}</b>", Group::desc_max_len(), desc.len()
+            && Group::desc_max_len() < desc.len()
+        {
+            utils::reply_to(
+                &context,
+                RoomMessageEventContent::text_html(
+                    format!(
+                        "Description length must be less than {}, current length: {}",
+                        Group::desc_max_len(),
+                        desc.len()
                     ),
-                ))
-                .await?;
-                return Ok(());
-            }
+                    format!(
+                        "Description length must be less than <b>{}</b>, current length: <b>{}</b>",
+                        Group::desc_max_len(),
+                        desc.len()
+                    ),
+                ),
+            )
+            .await?;
+            return Ok(());
+        }
 
         if args.remove_admin && args.new_admin_group.is_some() {
             printer

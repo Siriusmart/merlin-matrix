@@ -51,6 +51,15 @@ pub struct UpdateGroup {
     admin_group_id: Option<Option<GroupId>>,
 }
 
+impl UpdateGroup {
+    pub fn is_empty(&self) -> bool {
+        self.name.is_none()
+            && self.description.is_none()
+            && self.owner_id.is_none()
+            && self.admin_group_id.is_none()
+    }
+}
+
 impl Group {
     pub fn id(&self) -> GroupId {
         self.group_id
@@ -88,34 +97,6 @@ impl Group {
             .values(&new_group)
             .returning(Group::as_returning())
             .get_result(conn)?)
-    }
-
-    pub fn change_owner(
-        &mut self,
-        conn: &mut DatabaseConnection,
-        owner_id: UserId,
-    ) -> Result<(), Box<dyn Error>> {
-        diesel::update(&*self)
-            .set(groups::owner_id.eq(&owner_id))
-            .execute(conn)?;
-
-        self.owner_id = owner_id;
-
-        Ok(())
-    }
-
-    pub fn change_admin_group(
-        &mut self,
-        conn: &mut DatabaseConnection,
-        admin_group_id: Option<GroupId>,
-    ) -> Result<(), Box<dyn Error>> {
-        diesel::update(&*self)
-            .set(groups::admin_group_id.eq(&admin_group_id))
-            .execute(conn)?;
-
-        self.admin_group_id = admin_group_id;
-
-        Ok(())
     }
 
     pub fn delete(self, conn: &mut DatabaseConnection) -> Result<(), Box<dyn Error>> {
@@ -184,6 +165,10 @@ impl Group {
             owner_id,
             admin_group_id,
         };
+
+        if changeset.is_empty() {
+            return Ok(());
+        }
 
         diesel::update(groups::table.filter(groups::group_id.eq(group_id)))
             .set(changeset)

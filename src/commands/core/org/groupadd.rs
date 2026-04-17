@@ -30,7 +30,7 @@ struct CmdGroupAddArg {
     /// Name of admin group, default: none
     admin_group: Option<String>,
     /// A list of @users to add as members of the group, use -u multiple times to add more users
-    #[arg(short = 'u', long = "users")]
+    #[arg(short = 'u', long = "user")]
     users: Vec<String>,
 }
 

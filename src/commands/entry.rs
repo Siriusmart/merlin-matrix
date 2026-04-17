@@ -1,12 +1,15 @@
 use matrix_sdk::{
     Client, Room,
-    ruma::events::room::message::OriginalSyncRoomMessageEvent,
+    ruma::events::room::message::{OriginalSyncRoomMessageEvent, RoomMessageEventContent},
 };
 
 use tracing::*;
 
 use crate::{
-    commands::cmd::{CmdContext, CmdIndex},
+    commands::{
+        cmd::{CmdContext, CmdIndex},
+        utils::reply_to,
+    },
     org::{Database, utils::user_has_permission},
 };
 
@@ -82,24 +85,28 @@ pub async fn on_command(
 
     let context = CmdContext::new(client, event, room.clone(), args.clone());
 
-    let res = cmd.invoke(context.clone()).await;
+    // scope so the compiler async check knows res is not held across an await
+    // (it ignores drop() for some reason)
+    let err_content = {
+        let res = cmd.invoke(context.clone()).await;
 
-    if let Err(e) = res {
-        error!(
-            "Command {e} args={args:?} user={}:{} room={room_localpart}:{room_homeserver}",
-            context.event.sender.localpart(),
-            context.event.sender.server_name().as_str()
-        );
+        if let Err(e) = &res {
+            error!(
+                "Command error={e:?} args={args:?} user={}:{} room={room_localpart}:{room_homeserver}",
+                context.event.sender.localpart(),
+                context.event.sender.server_name().as_str()
+            );
 
-        /*
-        let _ = reply_to(
-            &context,
-            RoomMessageEventContent::text_html(
-                &format!("Oops, that's a crash\n{e:?}"),
-                &format!("Oops, that's a crash<br><pre>{e:?}</pre>"),
-            ),
-        )
-        .await;
-        */
+            Some(RoomMessageEventContent::text_html(
+                format!("Oops, that's a crash\n{e:?}"),
+                format!("Oops, that's a crash<br><pre>{e:?}</pre>"),
+            ))
+        } else {
+            None
+        }
+    };
+
+    if let Some(err_content) = err_content {
+        let _ = reply_to(&context, err_content).await;
     }
 }
