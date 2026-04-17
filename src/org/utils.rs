@@ -1,8 +1,8 @@
 use std::error::Error;
 
 use diesel::{
-    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension,
-    QueryDsl, RunQueryDsl, SqliteExpressionMethods,
+    ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl,
+    RunQueryDsl, SqliteExpressionMethods,
 };
 
 use crate::org::{
@@ -73,4 +73,31 @@ pub fn add_user_to_group(
         .execute(conn)?;
 
     Ok(inserted != 0)
+}
+
+pub fn remove_user_from_group(
+    conn: &mut DatabaseConnection,
+    user_id: UserId,
+    group_id: GroupId,
+) -> Result<bool, Box<dyn Error>> {
+    let removed = diesel::delete(group_users::table)
+        .filter(group_users::user_id.eq(user_id))
+        .filter(group_users::group_id.eq(group_id))
+        .execute(conn)?;
+
+    Ok(removed != 0)
+}
+
+/// test if user is in a group
+pub fn user_id_in_group_id(
+    conn: &mut DatabaseConnection,
+    user_id: UserId,
+    group_id: GroupId,
+) -> Result<bool, Box<dyn Error>> {
+    Ok(group_users::table
+        .filter(group_users::user_id.eq(user_id))
+        .filter(group_users::group_id.eq(group_id))
+        .first::<GroupUser>(conn)
+        .optional()?
+        .is_some())
 }

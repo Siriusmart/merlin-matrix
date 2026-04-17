@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Display};
 
 use clap::{Parser, error::ErrorKind};
 use matrix_sdk::{
@@ -10,6 +10,18 @@ use matrix_sdk::{
 };
 
 use crate::commands::CmdContext;
+
+#[allow(unused)]
+#[derive(Debug)]
+pub struct ErrorMsg(pub String);
+
+impl Display for ErrorMsg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{self:?}"))
+    }
+}
+
+impl Error for ErrorMsg {}
 
 /// parse command arguments, return Some if success, None otherwise
 pub async fn arg_parse<P: Parser>(context: &CmdContext) -> Result<Option<P>, Box<dyn Error>> {
@@ -43,7 +55,7 @@ pub async fn reply_to(
         SendMessageLikeEventResult,
         OriginalMessageLikeEvent<RoomMessageEventContent>,
     ),
-    Box<dyn Error>,
+    matrix_sdk::Error,
 > {
     let full_event = context
         .event

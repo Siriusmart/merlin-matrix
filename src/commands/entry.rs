@@ -1,4 +1,7 @@
-use matrix_sdk::{Client, Room, ruma::events::room::message::OriginalSyncRoomMessageEvent};
+use matrix_sdk::{
+    Client, Room,
+    ruma::events::room::message::OriginalSyncRoomMessageEvent,
+};
 
 use tracing::*;
 
@@ -86,6 +89,17 @@ pub async fn on_command(
             "Command {e} args={args:?} user={}:{} room={room_localpart}:{room_homeserver}",
             context.event.sender.localpart(),
             context.event.sender.server_name().as_str()
+        );
+
+        /*
+        let _ = reply_to(
+            &context,
+            RoomMessageEventContent::text_html(
+                &format!("Oops, that's a crash\n{e:?}"),
+                &format!("Oops, that's a crash<br><pre>{e:?}</pre>"),
+            ),
         )
+        .await;
+        */
     }
 }

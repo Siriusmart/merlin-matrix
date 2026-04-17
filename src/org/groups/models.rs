@@ -1,6 +1,6 @@
 use diesel::{
     ExpressionMethods, QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
-    prelude::{Associations, Identifiable, Insertable, Queryable},
+    prelude::{AsChangeset, Associations, Identifiable, Insertable, Queryable},
     query_dsl::methods::FindDsl,
     sqlite::Sqlite,
 };
@@ -41,6 +41,16 @@ struct NewGroup {
     admin_group_id: Option<GroupId>,
 }
 
+#[derive(AsChangeset)]
+#[diesel(table_name = groups)]
+#[diesel(check_for_backend(Sqlite))]
+pub struct UpdateGroup {
+    name: Option<String>,
+    description: Option<String>,
+    owner_id: Option<UserId>,
+    admin_group_id: Option<Option<GroupId>>,
+}
+
 impl Group {
     pub fn id(&self) -> GroupId {
         self.group_id
@@ -48,6 +58,14 @@ impl Group {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn owner(&self) -> UserId {
+        self.owner_id
+    }
+
+    pub fn admin_group(&self) -> Option<GroupId> {
+        self.admin_group_id
     }
 }
 
@@ -149,5 +167,28 @@ impl Group {
 
     pub fn desc_max_len() -> usize {
         150
+    }
+
+    /// write update to group info
+    pub fn update(
+        conn: &mut DatabaseConnection,
+        group_id: GroupId,
+        name: Option<String>,
+        desc: Option<String>,
+        owner_id: Option<UserId>,
+        admin_group_id: Option<Option<GroupId>>,
+    ) -> Result<(), Box<dyn Error>> {
+        let changeset = UpdateGroup {
+            name,
+            description: desc,
+            owner_id,
+            admin_group_id,
+        };
+
+        diesel::update(groups::table.filter(groups::group_id.eq(group_id)))
+            .set(changeset)
+            .execute(conn)?;
+
+        Ok(())
     }
 }

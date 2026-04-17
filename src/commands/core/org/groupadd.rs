@@ -18,26 +18,32 @@ pub struct CmdGroupAdd;
 #[derive(Parser)]
 #[command(name = "GroupAdd", version = "0.1.0", about = "Create a new group")]
 struct CmdGroupAddArg {
-    /// @user of group owner
-    #[arg(short = 'o', long = "owner")]
-    owner: Option<String>,
+    /// Unique name of the group, e.g. community_name.admins
+    group: String,
     /// A short description of the group
     #[arg(short = 'd', long = "desc")]
     desc: Option<String>,
+    /// @user of group owner
+    #[arg(short = 'o', long = "owner")]
+    owner: Option<String>,
     #[arg(short = 'a', long = "admin")]
     /// Name of admin group, default: none
     admin_group: Option<String>,
     /// A list of @users to add as members of the group, use -u multiple times to add more users
     #[arg(short = 'u', long = "users")]
     users: Vec<String>,
-    /// Unique name of the group, e.g. community_name.admins
-    group: String,
 }
 
 #[async_trait]
 impl Cmd for CmdGroupAdd {
     fn permissions(&self) -> &[&str] {
-        &["core.org.groupadd", "core.org", "core", "*"]
+        &[
+            "core.org.groups.add",
+            "core.org.groups",
+            "core.org",
+            "core",
+            "*",
+        ]
     }
 
     fn default_permission(&self) -> bool {
@@ -261,12 +267,12 @@ impl Cmd for CmdGroupAdd {
                     "\n* Missing users (not added) - {}",
                     users
                         .iter()
-                        .map(|u| (&u[1..]).to_string())
+                        .map(|u| u[1..].to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
                 format!(
-                    "\n<tr><td>Malformed users (not added)</td><td>{}</td>",
+                    "\n<tr><td>Missing users (not added)</td><td>{}</td>",
                     users
                         .iter()
                         .map(|u| format!("<b>{}</b>", &u[1..]))

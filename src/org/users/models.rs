@@ -47,6 +47,16 @@ impl User {
 }
 
 impl User {
+    pub fn get_with_id(
+        conn: &mut DatabaseConnection,
+        user_id: UserId,
+    ) -> Result<Option<User>, Box<dyn Error>> {
+        Ok(users::table
+            .filter(users::user_id.eq(user_id))
+            .first(conn)
+            .optional()?)
+    }
+
     pub fn get(
         conn: &mut DatabaseConnection,
         m_user_id: &str,
