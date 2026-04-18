@@ -13,6 +13,13 @@ use super::schema::groups;
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct GroupId(i32);
 
+impl GroupId {
+    // everyone group has id 0
+    pub fn everyone() -> Self {
+        Self(0)
+    }
+}
+
 /// - The user creating the group is by default the owner, ownership can be transferred
 /// - After creating the group, the owner of the group is not in the group
 /// - Users of the admin group can add, remove group members
@@ -139,8 +146,10 @@ impl Group {
         }
     }
 
+    /// validate group name: ascii alnum with ._-, and at least one . for workspace depth
     pub fn validate_name(name: &str) -> bool {
-        name.split('.').all(|chunk| !chunk.is_empty())
+        name.contains(".")
+            && name.split('.').all(|chunk| !chunk.is_empty())
             && name
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))

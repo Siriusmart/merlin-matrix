@@ -1,13 +1,16 @@
-use std::error::Error;
-
 use diesel::{
-    ExpressionMethods, OptionalExtension, RunQueryDsl, Selectable,
+    Connection, ExpressionMethods, OptionalExtension, RunQueryDsl, Selectable,
     prelude::{Identifiable, Insertable, Queryable},
     query_dsl::methods::FilterDsl,
     sqlite::Sqlite,
 };
 
-use crate::org::{DatabaseConnection, users::schema::users};
+use crate::org::{
+    DatabaseConnection,
+    group_users::{GroupUser, group_users},
+    groups::GroupId,
+    users::schema::users,
+};
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct UserId(i32);
@@ -50,7 +53,7 @@ impl User {
     pub fn get_with_id(
         conn: &mut DatabaseConnection,
         user_id: UserId,
-    ) -> Result<Option<User>, Box<dyn Error>> {
+    ) -> Result<Option<User>, diesel::result::Error> {
         Ok(users::table
             .filter(users::user_id.eq(user_id))
             .first(conn)
@@ -61,7 +64,7 @@ impl User {
         conn: &mut DatabaseConnection,
         m_user_id: &str,
         m_user_homeserver: &str,
-    ) -> Result<Option<User>, Box<dyn Error>> {
+    ) -> Result<Option<User>, diesel::result::Error> {
         Ok(users::table
             .filter(users::m_user_id.eq(m_user_id))
             .filter(users::m_user_homeserver.eq(m_user_homeserver))
@@ -73,7 +76,7 @@ impl User {
         conn: &mut DatabaseConnection,
         m_user_id: String,
         m_user_homeserver: String,
-    ) -> Result<User, Box<dyn Error>> {
+    ) -> Result<User, diesel::result::Error> {
         Self::ensure_created(conn, m_user_id.clone(), m_user_homeserver.clone())?;
 
         Ok(users::table
@@ -87,15 +90,29 @@ impl User {
         conn: &mut DatabaseConnection,
         m_user_id: String,
         m_user_homeserver: String,
-    ) -> Result<(), Box<dyn Error>> {
-        diesel::insert_into(users::table)
-            .values(&NewUser {
-                m_user_id,
-                m_user_homeserver,
-            })
-            .on_conflict((users::m_user_id, users::m_user_homeserver))
-            .do_nothing()
-            .execute(conn)?;
+    ) -> Result<(), diesel::result::Error> {
+        conn.transaction(|conn| {
+            let res = diesel::insert_into(users::table)
+                .values(&NewUser {
+                    m_user_id: m_user_id.clone(),
+                    m_user_homeserver: m_user_homeserver.clone(),
+                })
+                .on_conflict((users::m_user_id, users::m_user_homeserver))
+                .do_nothing()
+                .execute(conn)?;
+
+            let user: User = users::table
+                .filter(users::m_user_id.eq(&m_user_id))
+                .filter(users::m_user_homeserver.eq(&m_user_homeserver))
+                .first(conn)?;
+
+            if res != 0 {
+                diesel::insert_into(group_users::table)
+                    .values(GroupUser::new(user.id(), GroupId::everyone()))
+                    .execute(conn)?;
+            }
+            Ok::<_, diesel::result::Error>(())
+        })?;
         Ok(())
     }
 }
