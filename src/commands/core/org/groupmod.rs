@@ -183,8 +183,8 @@ impl Cmd for CmdGroupMod {
 * Contain only alphabet/numbers or '-', '_', '.'"#,
                         r#"Illegal group name, group name must:
 <ul>
-<li>* Be in format chunks1.chunks2.etc with at least 2 chunks</li>
-<li>* Contain only alphabet/numbers or '-', '_', '.'</li>
+<li>Be in format chunks1.chunks2.etc with at least 2 chunks</li>
+<li>Contain only alphabet/numbers or '-', '_', '.'</li>
 </ul>"#,
                     ),
                 )

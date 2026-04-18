@@ -50,7 +50,7 @@ impl Cmd for CmdGroups {
         };
 
         let (m_user_id, m_user_homeserver) = if let Some(user) = args.user {
-            if !user.starts_with("@") && user.chars().filter(|c| *c == ':').count() == 1 {
+            if !(user.starts_with("@") && user.chars().filter(|c| *c == ':').count() == 1) {
                 reply_to(
                     &context,
                     RoomMessageEventContent::text_plain(
@@ -149,7 +149,8 @@ impl Cmd for CmdGroups {
             .println(
                 &format!(r#"Groups Summary of {m_user_id}:{m_user_homeserver}{part_of_plain}{admin_of_plain}{owner_of_plain}"#),
                 &format!(
-                    r#"Groups Summary of <b>{m_user_id}:{m_user_homeserver}<b>{part_of_html}{admin_of_html}{owner_of_html}"#
+                    r#"Groups Summary of <b>{m_user_id}:{m_user_homeserver}<b><br>
+<table>{part_of_html}{admin_of_html}{owner_of_html}</table>"#
                 ),
             )
             .await?;
