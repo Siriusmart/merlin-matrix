@@ -54,10 +54,10 @@ impl User {
         conn: &mut DatabaseConnection,
         user_id: UserId,
     ) -> Result<Option<User>, diesel::result::Error> {
-        Ok(users::table
+        users::table
             .filter(users::user_id.eq(user_id))
             .first(conn)
-            .optional()?)
+            .optional()
     }
 
     pub fn get(
@@ -65,11 +65,11 @@ impl User {
         m_user_id: &str,
         m_user_homeserver: &str,
     ) -> Result<Option<User>, diesel::result::Error> {
-        Ok(users::table
+        users::table
             .filter(users::m_user_id.eq(m_user_id))
             .filter(users::m_user_homeserver.eq(m_user_homeserver))
             .first(conn)
-            .optional()?)
+            .optional()
     }
 
     pub fn get_or_create(
@@ -79,10 +79,10 @@ impl User {
     ) -> Result<User, diesel::result::Error> {
         Self::ensure_created(conn, m_user_id.clone(), m_user_homeserver.clone())?;
 
-        Ok(users::table
+        users::table
             .filter(users::m_user_id.eq(m_user_id))
             .filter(users::m_user_homeserver.eq(m_user_homeserver))
-            .first(conn)?)
+            .first(conn)
     }
 
     /// create if not already exist, otherwise do nothing

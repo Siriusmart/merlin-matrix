@@ -9,7 +9,7 @@ use crate::org::{
     DatabaseConnection,
     context_permissions::context_permissions,
     group_users::{GroupUser, group_users},
-    groups::GroupId,
+    groups::{GroupId, groups},
     permissions::permissions,
     rooms::rooms,
     users::{UserId, users},
@@ -20,6 +20,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     context_permissions,
     users,
     group_users,
+    groups,
     permissions,
 );
 
@@ -100,4 +101,57 @@ pub fn user_id_in_group_id(
         .first::<GroupUser>(conn)
         .optional()?
         .is_some())
+}
+
+/// return list of group names the users is in
+pub fn list_user_groups_s(
+    conn: &mut DatabaseConnection,
+    m_user_id: &str,
+    m_user_homeserver: &str,
+) -> Result<Vec<String>, diesel::result::Error> {
+    users::table
+        .inner_join(group_users::table.on(group_users::user_id.eq(users::user_id)))
+        .filter(users::m_user_id.eq(m_user_id))
+        .filter(users::m_user_homeserver.eq(m_user_homeserver))
+        .inner_join(groups::table.on(group_users::group_id.eq(groups::group_id)))
+        .distinct()
+        .select(groups::name)
+        .get_results(conn)
+}
+
+/// return list of group names the users is admin of
+pub fn list_user_groups_admin_s(
+    conn: &mut DatabaseConnection,
+    m_user_id: &str,
+    m_user_homeserver: &str,
+) -> Result<Vec<String>, diesel::result::Error> {
+    let admin_groups = diesel::alias!(groups as admin_groups);
+
+    users::table
+        .inner_join(group_users::table.on(group_users::user_id.eq(users::user_id)))
+        .filter(users::m_user_id.eq(m_user_id))
+        .filter(users::m_user_homeserver.eq(m_user_homeserver))
+        .inner_join(admin_groups.on(group_users::group_id.eq(admin_groups.field(groups::group_id))))
+        .inner_join(
+            groups::table
+                .on(groups::admin_group_id.is(admin_groups.field(groups::group_id).nullable())),
+        )
+        .distinct()
+        .select(groups::name)
+        .get_results(conn)
+}
+
+/// return list of group names the users is admin of
+pub fn list_user_groups_owned_s(
+    conn: &mut DatabaseConnection,
+    m_user_id: &str,
+    m_user_homeserver: &str,
+) -> Result<Vec<String>, diesel::result::Error> {
+    users::table
+        .inner_join(groups::table.on(groups::owner_id.eq(users::user_id)))
+        .filter(users::m_user_id.eq(m_user_id))
+        .filter(users::m_user_homeserver.eq(m_user_homeserver))
+        .distinct()
+        .select(groups::name)
+        .get_results(conn)
 }
