@@ -174,10 +174,19 @@ impl Cmd for CmdGroupMod {
         }
 
         if let Some(name) = &args.new_name {
-            if !Group::validate_name(name) {
+            if !Group::validate_name(&args.group) {
                 utils::reply_to(
                     &context,
-                    RoomMessageEventContent::text_plain(r#"Illegal group name"#),
+                    RoomMessageEventContent::text_html(
+                        r#"Illegal group name, group name must:
+* Be in format chunks1.chunks2.etc with at least 2 chunks
+* Contain only alphabet/numbers or '-', '_', '.'"#,
+                        r#"Illegal group name, group name must:
+<ul>
+<li>* Be in format chunks1.chunks2.etc with at least 2 chunks</li>
+<li>* Contain only alphabet/numbers or '-', '_', '.'</li>
+</ul>"#,
+                    ),
                 )
                 .await?;
                 return Ok(());
