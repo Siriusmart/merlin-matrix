@@ -1,12 +1,16 @@
 use diesel::{
-    ExpressionMethods, QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
+    Connection, ExpressionMethods, QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
+    SqliteExpressionMethods,
     prelude::{AsChangeset, Associations, Identifiable, Insertable, Queryable},
     query_dsl::methods::FindDsl,
     sqlite::Sqlite,
 };
 use std::error::Error;
 
-use crate::org::{DatabaseConnection, users::UserId};
+use crate::org::{
+    DatabaseConnection, context_permissions::context_permissions, contexts::contexts,
+    group_users::group_users, users::UserId,
+};
 
 use super::schema::groups;
 
@@ -107,7 +111,25 @@ impl Group {
     }
 
     pub fn delete(self, conn: &mut DatabaseConnection) -> Result<(), Box<dyn Error>> {
-        diesel::delete(FindDsl::find(groups::table, self.group_id)).execute(conn)?;
+        tracing::debug!("{}", self.name());
+        conn.transaction(|conn| {
+            diesel::delete(group_users::table)
+                .filter(group_users::group_id.eq(self.group_id))
+                .execute(conn)?;
+            diesel::delete(context_permissions::table)
+                .filter(context_permissions::group_id.eq(self.group_id))
+                .execute(conn)?;
+            diesel::update(contexts::table)
+                .filter(contexts::admin_group_id.is(self.group_id))
+                .set(contexts::admin_group_id.eq(None::<GroupId>))
+                .execute(conn)?;
+            diesel::update(groups::table)
+                .filter(groups::admin_group_id.is(self.group_id))
+                .set(groups::admin_group_id.eq(None::<GroupId>))
+                .execute(conn)?;
+            diesel::delete(FindDsl::find(groups::table, self.group_id)).execute(conn)?;
+            Ok::<_, diesel::result::Error>(())
+        })?;
 
         Ok(())
     }
