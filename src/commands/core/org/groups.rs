@@ -1,13 +1,12 @@
 use std::error::Error;
 
 use clap::Parser;
-use matrix_sdk::{async_trait, ruma::events::room::message::RoomMessageEventContent};
+use matrix_sdk::async_trait;
 
 use crate::{
     commands::{
         Cmd, CmdContext,
-        message_printer::MessagePrinter,
-        utils::{arg_parse, reply_to},
+        utils::{HtmlMessageBuffer, MessagePrinter, arg_parse, reply_to_plain},
     },
     org::{
         Database,
@@ -51,13 +50,7 @@ impl Cmd for CmdGroups {
 
         let (m_user_id, m_user_homeserver) = if let Some(user) = args.user {
             if !(user.starts_with("@") && user.chars().filter(|c| *c == ':').count() == 1) {
-                reply_to(
-                    &context,
-                    RoomMessageEventContent::text_plain(
-                        "Malformed user argument, expected @mention.",
-                    ),
-                )
-                .await?;
+                reply_to_plain(&context, "Malformed user argument, expected @mention.").await?;
                 return Ok(());
             }
 
@@ -70,25 +63,31 @@ impl Cmd for CmdGroups {
             )
         };
 
-        let mut printer = MessagePrinter::new(context.clone());
         let mut conn = Database::conn();
 
+        let mut msg = MessagePrinter::<HtmlMessageBuffer>::new_cmd_reply(context);
+
+        msg.buffer().println(
+            &format!(r#"Groups Summary of {m_user_id}:{m_user_homeserver}"#),
+            &format!(r#"Groups Summary of <b>{m_user_id}:{m_user_homeserver}<b><table>"#),
+        );
+
         let part_of = list_user_groups_s(&mut conn, &m_user_id, &m_user_homeserver)?;
-        let (part_of_plain, part_of_html) = if part_of.is_empty() {
-            (
-                "\n* Not member of any groups".to_string(),
-                "\n<tr><td>Member of 0 groups</td><td><i>[empty list]</i></td></tr>".to_string(),
+        if part_of.is_empty() {
+            msg.buffer().print(
+                "\n* Not member of any groups",
+                "<tr><td>Member of 0 groups</td><td><i>[empty list]</i></td></tr>",
             )
         } else {
             let s = if part_of.len() == 1 { "" } else { "s" };
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Member of {} group{s}: {}",
                     part_of.len(),
                     part_of.join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Member of {} group{s}</td><td><i>{}</i></td></tr>",
+                &format!(
+                    "<tr><td>Member of {} group{s}</td><td><i>{}</i></td></tr>",
                     part_of.len(),
                     part_of
                         .iter()
@@ -100,18 +99,16 @@ impl Cmd for CmdGroups {
         };
 
         let admin_of = list_user_groups_admin_s(&mut conn, &m_user_id, &m_user_homeserver)?;
-        let (admin_of_plain, admin_of_html) = if admin_of.is_empty() {
-            (String::new(), String::new())
-        } else {
+        if !admin_of.is_empty() {
             let s = if admin_of.len() == 1 { "" } else { "s" };
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Admin of {} group{s}: {}",
                     admin_of.len(),
                     admin_of.join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Admin of {} group{s}</td><td><i>{}</i></td></tr>",
+                &format!(
+                    "<tr><td>Admin of {} group{s}</td><td><i>{}</i></td></tr>",
                     admin_of.len(),
                     admin_of
                         .iter()
@@ -123,18 +120,16 @@ impl Cmd for CmdGroups {
         };
 
         let owner_of = list_user_groups_owned_s(&mut conn, &m_user_id, &m_user_homeserver)?;
-        let (owner_of_plain, owner_of_html) = if owner_of.is_empty() {
-            (String::new(), String::new())
-        } else {
+        if !owner_of.is_empty() {
             let s = if owner_of.len() == 1 { "" } else { "s" };
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Owner of {} group{s}: {}",
                     owner_of.len(),
                     owner_of.join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Owner of {} group{s}</td><td><i>{}</i></td></tr>",
+                &format!(
+                    "<tr><td>Owner of {} group{s}</td><td><i>{}</i></td></tr>",
                     owner_of.len(),
                     owner_of
                         .iter()
@@ -145,15 +140,8 @@ impl Cmd for CmdGroups {
             )
         };
 
-        printer
-            .println(
-                &format!(r#"Groups Summary of {m_user_id}:{m_user_homeserver}{part_of_plain}{admin_of_plain}{owner_of_plain}"#),
-                &format!(
-                    r#"Groups Summary of <b>{m_user_id}:{m_user_homeserver}<b><br>
-<table>{part_of_html}{admin_of_html}{owner_of_html}</table>"#
-                ),
-            )
-            .await?;
+        msg.buffer().print_html("</table>");
+        msg.flush().await?;
 
         Ok(())
     }

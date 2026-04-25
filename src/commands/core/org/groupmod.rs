@@ -1,13 +1,15 @@
 use clap::Parser;
 use std::{collections::HashSet, error::Error};
 
-use matrix_sdk::{async_trait, ruma::events::room::message::RoomMessageEventContent};
+use matrix_sdk::async_trait;
 
 use crate::{
     commands::{
         Cmd, CmdContext,
-        message_printer::MessagePrinter,
-        utils::{self, ErrorMsg, arg_parse, reply_to},
+        utils::{
+            self, ErrorMsg, HtmlMessageBuffer, MessagePrinter, arg_parse, reply_to_html,
+            reply_to_plain,
+        },
     },
     org::{
         Database,
@@ -75,8 +77,6 @@ impl Cmd for CmdGroupMod {
             return Ok(());
         };
 
-        let mut printer = MessagePrinter::new(context.clone());
-
         if args.new_name.is_none()
             && args.new_desc.is_none()
             && args.new_owner.is_none()
@@ -85,27 +85,22 @@ impl Cmd for CmdGroupMod {
             && args.add_users.is_empty()
             && args.remove_users.is_empty()
         {
-            printer
-                .println(
-                    "Nothing to change: no options provided",
-                    "Nothing to change: no options provided",
-                )
-                .await?;
+            reply_to_plain(&context, "Nothing to change: no options provided").await?;
             return Ok(());
         }
 
         let mut conn = Database::conn();
 
         let Some(group_to_modify) = Group::find_by_name(&mut conn, &args.group)? else {
-            printer
-                .println(
-                    &format!(r#"I could not find a group called "{}""#, args.group),
-                    &format!(
-                        "I could not find a group called <code>{}</code>",
-                        args.group
-                    ),
-                )
-                .await?;
+            reply_to_html(
+                &context,
+                &format!(r#"I could not find a group called "{}""#, args.group),
+                &format!(
+                    "I could not find a group called <code>{}</code>",
+                    args.group
+                ),
+            )
+            .await?;
 
             return Ok(());
         };
@@ -130,18 +125,18 @@ impl Cmd for CmdGroupMod {
         };
 
         if !sender_is_group_admin {
-            printer
-                .println(
-                    &format!(
-                        r#"No permission: you are not a group admin of "{}""#,
-                        group_to_modify.name()
-                    ),
-                    &format!(
-                        r#"No permission: you are not a group admin of <code>{}</code>"#,
-                        group_to_modify.name()
-                    ),
-                )
-                .await?;
+            reply_to_html(
+                &context,
+                &format!(
+                    r#"No permission: you are not a group admin of "{}""#,
+                    group_to_modify.name()
+                ),
+                &format!(
+                    r#"No permission: you are not a group admin of <code>{}</code>"#,
+                    group_to_modify.name()
+                ),
+            )
+            .await?;
             return Ok(());
         }
 
@@ -160,7 +155,7 @@ impl Cmd for CmdGroupMod {
         };
 
         if let Some(reason) = non_owner_offending {
-            printer.println(
+            reply_to_html(&context,
                 &format!(
                     r#"Cannot change {reason} of "{}"" because you are not the group owner"#,
                     group_to_modify.name()
@@ -175,18 +170,16 @@ impl Cmd for CmdGroupMod {
 
         if let Some(name) = &args.new_name {
             if !Group::validate_name(&args.group) {
-                utils::reply_to(
+                utils::reply_to_html(
                     &context,
-                    RoomMessageEventContent::text_html(
-                        r#"Illegal group name, group name must:
+                    r#"Illegal group name, group name must:
 * Be in format chunks1.chunks2.etc with at least 2 chunks
 * Contain only alphabet/numbers or '-', '_', '.'"#,
-                        r#"Illegal group name, group name must:
+                    r#"Illegal group name, group name must:
 <ul>
 <li>Be in format chunks1.chunks2.etc with at least 2 chunks</li>
 <li>Contain only alphabet/numbers or '-', '_', '.'</li>
 </ul>"#,
-                    ),
                 )
                 .await?;
                 return Ok(());
@@ -194,12 +187,10 @@ impl Cmd for CmdGroupMod {
 
             // check group is not a sys.*
             if name.starts_with("sys.") {
-                utils::reply_to(
+                utils::reply_to_html(
                     &context,
-                    RoomMessageEventContent::text_html(
-                        r#"You are not allowed to make groups with prefix "sys.""#,
-                        r#"You are not allowed to make groups with prefix <code>sys.</code>"#,
-                    ),
+                    r#"You are not allowed to make groups with prefix "sys.""#,
+                    r#"You are not allowed to make groups with prefix <code>sys.</code>"#,
                 )
                 .await?;
                 return Ok(());
@@ -209,19 +200,17 @@ impl Cmd for CmdGroupMod {
         if let Some(desc) = &args.new_desc
             && Group::desc_max_len() < desc.len()
         {
-            utils::reply_to(
+            utils::reply_to_html(
                 &context,
-                RoomMessageEventContent::text_html(
-                    format!(
-                        "Description length must be less than {}, current length: {}",
-                        Group::desc_max_len(),
-                        desc.len()
-                    ),
-                    format!(
-                        "Description length must be less than <b>{}</b>, current length: <b>{}</b>",
-                        Group::desc_max_len(),
-                        desc.len()
-                    ),
+                &format!(
+                    "Description length must be less than {}, current length: {}",
+                    Group::desc_max_len(),
+                    desc.len()
+                ),
+                &format!(
+                    "Description length must be less than <b>{}</b>, current length: <b>{}</b>",
+                    Group::desc_max_len(),
+                    desc.len()
                 ),
             )
             .await?;
@@ -229,22 +218,20 @@ impl Cmd for CmdGroupMod {
         }
 
         if args.remove_admin && args.new_admin_group.is_some() {
-            printer
-                .println(
-                    "Not changed: remove_admin and new_admin_group is both set",
-                    "Not changed: <i>remove_admin</i> and <i>new_admin_group</i> is both set",
-                )
-                .await?;
+            reply_to_html(
+                &context,
+                "Not changed: remove_admin and new_admin_group is both set",
+                "Not changed: <i>remove_admin</i> and <i>new_admin_group</i> is both set",
+            )
+            .await?;
             return Ok(());
         }
 
         let new_owner = if let Some(owner) = args.new_owner {
             if !owner.starts_with("@") || owner.chars().filter(|c| *c == ':').count() != 1 {
-                reply_to(
+                reply_to_plain(
                     &context,
-                    RoomMessageEventContent::text_plain(
-                        "Owner argument malformed: it should be an @mention",
-                    ),
+                    "Owner argument malformed: it should be an @mention",
                 )
                 .await?;
                 return Ok(());
@@ -253,13 +240,13 @@ impl Cmd for CmdGroupMod {
                 if let Some(user) = User::get(&mut conn, m_user_id, m_user_homeserver)? {
                     Some(user)
                 } else {
-                    reply_to(
+                    reply_to_html(
                         &context,
-                        RoomMessageEventContent::text_html(format!(
+                        &format!(
                             "Not created: new group owner {owner} has never joined a room with Merlin"
-                        ), format!(
+                        ), &format!(
                             "Not created: new group owner <b>{owner}</b> has never joined a room with Merlin"
-                        )),
+                        ),
                     )
                     .await?;
                     return Ok(());
@@ -278,12 +265,12 @@ impl Cmd for CmdGroupMod {
                     Some(Some(found_group.name().to_string())),
                 )
             } else {
-                printer
-                    .println(
-                        &format!("Could not find group with name {admin_group}"),
-                        &format!("Could not find group with name <i>{admin_group}</i>"),
-                    )
-                    .await?;
+                reply_to_html(
+                    &context,
+                    &format!("Could not find group with name {admin_group}"),
+                    &format!("Could not find group with name <i>{admin_group}</i>"),
+                )
+                .await?;
                 return Ok(());
             }
         } else {
@@ -297,18 +284,18 @@ impl Cmd for CmdGroupMod {
 
             // check group name has not been used before
             if let Some(existing_group) = existing_group {
-                printer
-                    .println(
-                        &format!(
-                            r#"Not modified, there is already another group called "{}""#,
-                            existing_group.name()
-                        ),
-                        &format!(
-                            "Not modified, there is already another group called <code>{}</code>",
-                            existing_group.name()
-                        ),
-                    )
-                    .await?;
+                reply_to_html(
+                    &context,
+                    &format!(
+                        r#"Not modified, there is already another group called "{}""#,
+                        existing_group.name()
+                    ),
+                    &format!(
+                        "Not modified, there is already another group called <code>{}</code>",
+                        existing_group.name()
+                    ),
+                )
+                .await?;
                 return Ok(());
             }
         }
@@ -391,64 +378,65 @@ impl Cmd for CmdGroupMod {
         }
 
         // building summary
-        let (name_plain, name_html) = if let Some(name) = args.new_name {
-            (
-                format!("\n* New name: {name}"),
-                format!("\n<tr><td>New name</td><td><code>{name}</code></td></tr>"),
-            )
-        } else {
-            (String::new(), String::new())
-        };
 
-        let (desc_plain, desc_html) = if let Some(desc) = args.new_desc {
-            let (plain, html) = if desc.is_empty() {
-                (
-                    "[empty string]".to_string(),
-                    "<i>[empty string]</i>".to_string(),
-                )
+        let mut msg = MessagePrinter::<HtmlMessageBuffer>::new_cmd_reply(context);
+
+        msg.buffer().print(
+            &format!("\nGroup Update Summary for \"{}\":", group_to_modify.name()),
+            &format!(
+                "<b>Group Update Summary for <code>{}</code></b><table>",
+                group_to_modify.name()
+            ),
+        );
+
+        if let Some(name) = args.new_name {
+            msg.buffer().print(
+                &format!("\n* New name: {name}"),
+                &format!("<tr><td>New name</td><td><code>{name}</code></td></tr>"),
+            )
+        }
+
+        if let Some(desc) = args.new_desc {
+            msg.buffer()
+                .print("\n* New desc:", "<tr><td>New description</td><td>");
+
+            if desc.is_empty() {
+                msg.buffer()
+                    .print("[empty string]", "<i>[empty string]</i>");
             } else {
-                (desc.clone(), desc)
-            };
+                msg.buffer().print(&desc, &html_escape::encode_text(&desc))
+            }
 
-            (
-                format!("\n* New desc: {plain}"),
-                format!("\n<tr><td>New description</td><td>{html}</td></tr>"),
-            )
-        } else {
-            (String::new(), String::new())
-        };
+            msg.buffer().print_html("</td></tr>");
+        }
 
-        let (owner_plain, owner_html) = if let Some(owner) = new_owner {
-            (
-                format!("\n* New owner: {}:{}", owner.m_id(), owner.m_homeserver()),
-                format!(
-                    "\n<tr><td>New owner</td><td>{}:{}</td></tr>",
+        if let Some(owner) = new_owner {
+            msg.buffer().print(
+                &format!("\n* New owner: {}:{}", owner.m_id(), owner.m_homeserver()),
+                &format!(
+                    "<tr><td>New owner</td><td><b>{}:{}</b></td></tr>",
                     owner.m_id(),
                     owner.m_homeserver()
                 ),
             )
-        } else {
-            (String::new(), String::new())
-        };
+        }
 
-        let (admin_plain, admin_html) = match new_admin_group_name {
-            Some(Some(admin)) => (
-                format!("\n* New admin group: {admin}"),
-                format!("\n<tr><td>New admin group</td><td>{admin}</td></tr>"),
+        match new_admin_group_name {
+            Some(Some(admin)) => msg.buffer().print(
+                &format!("\n* New admin group: {admin}"),
+                &format!("<tr><td>New admin group</td><td><b>{admin}</b></td></tr>"),
             ),
-            Some(None) => (
-                "\n* New admin group: none".to_string(),
-                "\n<tr><td>New admin group</td><td><i>none</i></td></tr>".to_string(),
+            Some(None) => msg.buffer().print(
+                "\n* New admin group: none",
+                "<tr><td>New admin group</td><td><i>none</i></td></tr>",
             ),
-            None => (String::new(), String::new()),
-        };
+            _ => {}
+        }
 
-        let (added_users_plain, added_users_html) = if actually_add_users.is_empty() {
-            (String::new(), String::new())
-        } else {
+        if !actually_add_users.is_empty() {
             let users = actually_add_users.into_iter().collect::<Vec<_>>();
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Added users - {}",
                     users
                         .iter()
@@ -456,8 +444,8 @@ impl Cmd for CmdGroupMod {
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Added users</td><td>{}</td>",
+                &format!(
+                    "<tr><td>Added users</td><td>{}</td>",
                     users
                         .iter()
                         .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
@@ -467,12 +455,10 @@ impl Cmd for CmdGroupMod {
             )
         };
 
-        let (removed_users_plain, remove_users_html) = if actually_remove_users.is_empty() {
-            (String::new(), String::new())
-        } else {
+        if !actually_remove_users.is_empty() {
             let users = actually_remove_users.into_iter().collect::<Vec<_>>();
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Removed users - {}",
                     users
                         .iter()
@@ -480,8 +466,8 @@ impl Cmd for CmdGroupMod {
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Removed users</td><td>{}</td>",
+                &format!(
+                    "<tr><td>Removed users</td><td>{}</td>",
                     users
                         .iter()
                         .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
@@ -491,62 +477,54 @@ impl Cmd for CmdGroupMod {
             )
         };
 
-        let (malformed_add_users_plain, malformed_add_users_html) =
-            if malformed_add_users.is_empty() {
-                (String::new(), String::new())
-            } else {
-                let users = malformed_add_users.into_iter().collect::<Vec<_>>();
-                (
-                    format!(
-                        "\n* Malformed users (not added) - {}",
-                        users
-                            .iter()
-                            .map(|u| format!("\"{u}\""))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                    format!(
-                        "\n<tr><td>Malformed users (not added)</td><td>{}</td>",
-                        users
-                            .iter()
-                            .map(|u| format!("<code>{u}</code>"))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                )
-            };
+        if !malformed_add_users.is_empty() {
+            let users = malformed_add_users.into_iter().collect::<Vec<_>>();
+            msg.buffer().print(
+                &format!(
+                    "\n* Malformed users (not added) - {}",
+                    users
+                        .iter()
+                        .map(|u| format!("\"{u}\""))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                &format!(
+                    "<tr><td>Malformed users (not added)</td><td>{}</td>",
+                    users
+                        .iter()
+                        .map(|u| format!("<code>{u}</code>"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            )
+        };
 
-        let (malformed_remove_users_plain, malformed_remove_users_html) =
-            if malformed_remove_users.is_empty() {
-                (String::new(), String::new())
-            } else {
-                let users = malformed_remove_users.into_iter().collect::<Vec<_>>();
-                (
-                    format!(
-                        "\n* Malformed users (not removed) - {}",
-                        users
-                            .iter()
-                            .map(|u| format!("\"{u}\""))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                    format!(
-                        "\n<tr><td>Malformed users (not removed)</td><td>{}</td>",
-                        users
-                            .iter()
-                            .map(|u| format!("<code>{u}</code>"))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                )
-            };
+        if !malformed_remove_users.is_empty() {
+            let users = malformed_remove_users.into_iter().collect::<Vec<_>>();
+            msg.buffer().print(
+                &format!(
+                    "\n* Malformed users (not removed) - {}",
+                    users
+                        .iter()
+                        .map(|u| format!("\"{u}\""))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                &format!(
+                    "<tr><td>Malformed users (not removed)</td><td>{}</td>",
+                    users
+                        .iter()
+                        .map(|u| format!("<code>{u}</code>"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            )
+        };
 
-        let (missing_add_users_plain, missing_add_users_html) = if missing_add_users.is_empty() {
-            (String::new(), String::new())
-        } else {
+        if !missing_add_users.is_empty() {
             let users = missing_add_users.into_iter().collect::<Vec<_>>();
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Missing users (not added) - {}",
                     users
                         .iter()
@@ -554,8 +532,8 @@ impl Cmd for CmdGroupMod {
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Missing users (not added)</td><td>{}</td>",
+                &format!(
+                    "<tr><td>Missing users (not added)</td><td>{}</td>",
                     users
                         .iter()
                         .map(|u| format!("<b>{}</b>", &u[1..]))
@@ -565,67 +543,52 @@ impl Cmd for CmdGroupMod {
             )
         };
 
-        let (unchanged_add_users_plain, unchanged_add_users_html) =
-            if unchanged_add_users.is_empty() {
-                (String::new(), String::new())
-            } else {
-                let users = unchanged_add_users.into_iter().collect::<Vec<_>>();
-                (
-                    format!(
-                        "\n* Users already in group (not added) - {}",
-                        users
-                            .iter()
-                            .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                    format!(
-                        "\n<tr><td>Users already in group (not added)</td><td>{}</td>",
-                        users
-                            .iter()
-                            .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                )
-            };
-
-        let (unchanged_remove_users_plain, unchanged_remove_users_html) =
-            if unchanged_remove_users.is_empty() && missing_remove_users.is_empty() {
-                (String::new(), String::new())
-            } else {
-                let users = unchanged_remove_users
-                    .into_iter()
-                    .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
-                    .chain(missing_remove_users.into_iter().map(|s| s[1..].to_string()))
-                    .collect::<Vec<_>>();
-                (
-                    format!(
-                        "\n* Users already in group (not added) - {}",
-                        users.join(", ")
-                    ),
-                    format!(
-                        "\n<tr><td>Users already in group (not added)</td><td>{}</td>",
-                        users
-                            .iter()
-                            .map(|u| format!("<b>{u}</b>"))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                )
-            };
-
-        printer
-            .replace(
-                &format!(r#"Group Update Summary for "{}":{name_plain}{desc_plain}{owner_plain}{admin_plain}{added_users_plain}{malformed_add_users_plain}{missing_add_users_plain}{unchanged_add_users_plain}{removed_users_plain}{malformed_remove_users_plain}{unchanged_remove_users_plain}"#, group_to_modify.name()),
+        if !unchanged_add_users.is_empty() {
+            let users = unchanged_add_users.into_iter().collect::<Vec<_>>();
+            msg.buffer().print(
                 &format!(
-                    r#"<b>Group Update Summary for <code>{}</code></b>
-<table>{name_html}{desc_html}{owner_html}{admin_html}{added_users_html}{malformed_add_users_html}{missing_add_users_html}{unchanged_add_users_html}{remove_users_html}{malformed_remove_users_html}{unchanged_remove_users_html}
-</table>"#,
-                    group_to_modify.name()
+                    "\n* Users already in group (not added) - {}",
+                    users
+                        .iter()
+                        .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                &format!(
+                    "<tr><td>Users already in group (not added)</td><td>{}</td>",
+                    users
+                        .iter()
+                        .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ),
             )
-            .await?;
+        };
+
+        if !unchanged_remove_users.is_empty() || !missing_remove_users.is_empty() {
+            let users = unchanged_remove_users
+                .into_iter()
+                .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
+                .chain(missing_remove_users.into_iter().map(|s| s[1..].to_string()))
+                .collect::<Vec<_>>();
+            msg.buffer().print(
+                &format!(
+                    "\n* Users already not in group (not removed) - {}",
+                    users.join(", ")
+                ),
+                &format!(
+                    "<tr><td>Users already not in group (not removed)</td><td>{}</td>",
+                    users
+                        .iter()
+                        .map(|u| format!("<b>{u}</b>"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            )
+        };
+
+        msg.buffer().print_html("</table>");
+        msg.flush().await?;
 
         Ok(())
     }

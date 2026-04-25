@@ -4,7 +4,10 @@ use clap::Parser;
 use matrix_sdk::async_trait;
 use tracing::instrument;
 
-use crate::commands::{Cmd, CmdContext, EditableMessage, utils::arg_parse};
+use crate::commands::{
+    Cmd, CmdContext,
+    utils::{HtmlMessageBuffer, MessagePrinter, arg_parse},
+};
 
 pub struct CmdPing;
 
@@ -28,20 +31,21 @@ impl Cmd for CmdPing {
             return Ok(());
         }
 
+        let mut printer = MessagePrinter::<HtmlMessageBuffer>::new_cmd_reply(context);
+        printer
+            .buffer()
+            .println("Latency: measuring", "Latency: <i>measuring</i>");
+
         let start = Instant::now();
-
-        let mut sent_msg =
-            EditableMessage::new_reply("Latency: measuring", "Latency: <i>measuring</i>", context)
-                .await?;
-
+        printer.flush().await?;
         let elapsed = start.elapsed().as_millis();
 
-        sent_msg
-            .replace(
-                &format!("Latency: {elapsed}ms"),
-                &format!("Latency: <b>{elapsed}ms</b>"),
-            )
-            .await?;
+        printer.buffer().replace(
+            &format!("Latency: {elapsed}ms"),
+            &format!("Latency: <b>{elapsed}ms</b>"),
+        );
+        printer.flush().await?;
+
         Ok(())
     }
 }

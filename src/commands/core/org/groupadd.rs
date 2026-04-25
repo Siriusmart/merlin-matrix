@@ -1,14 +1,15 @@
 use std::{collections::HashSet, error::Error};
 
 use clap::Parser;
-use matrix_sdk::{async_trait, ruma::events::room::message::RoomMessageEventContent};
+use matrix_sdk::async_trait;
 use tracing::instrument;
 
 use crate::{
     commands::{
         Cmd, CmdContext,
-        message_printer::MessagePrinter,
-        utils::{self, arg_parse, reply_to},
+        utils::{
+            self, HtmlMessageBuffer, MessagePrinter, arg_parse, reply_to_html, reply_to_plain,
+        },
     },
     org::{Database, groups::Group, users::User, utils::add_user_to_group},
 };
@@ -58,18 +59,16 @@ impl Cmd for CmdGroupAdd {
 
         // validate group name constraint
         if !Group::validate_name(&args.group) {
-            utils::reply_to(
+            utils::reply_to_html(
                 &context,
-                RoomMessageEventContent::text_html(
-                    r#"Illegal group name, group name must:
+                r#"Illegal group name, group name must:
 * Be in format "chunks1.chunks2.etc" with at least 2 chunks
 * Contain only alphabet/numbers or '-', '_', '.'"#,
-                    r#"Illegal group name, group name must:
+                r#"Illegal group name, group name must:
 <ul>
 <li>Be in format <b>chunks1.chunks2.etc</b> with at least 2 chunks</li>
 <li>Contain only alphabet/numbers or '-', '_', '.'</li>
 </ul>"#,
-                ),
             )
             .await?;
             return Ok(());
@@ -78,13 +77,19 @@ impl Cmd for CmdGroupAdd {
         // validate description length constraint
         let desc = if let Some(d) = args.desc {
             if Group::desc_max_len() < d.len() {
-                utils::reply_to(
+                utils::reply_to_html(
                     &context,
-                    RoomMessageEventContent::text_html(
-                        format!("Description length must be less than {}, current length: {}", Group::desc_max_len(), d.len()),
-                        format!("Description length must be less than <b>{}</b>, current length: <b>{}</b>", Group::desc_max_len(), d.len()
+                    &format!(
+                        "Description length must be less than {}, current length: {}",
+                        Group::desc_max_len(),
+                        d.len()
                     ),
-                ))
+                    &format!(
+                        "Description length must be less than <b>{}</b>, current length: <b>{}</b>",
+                        Group::desc_max_len(),
+                        d.len()
+                    ),
+                )
                 .await?;
                 return Ok(());
             } else {
@@ -96,12 +101,10 @@ impl Cmd for CmdGroupAdd {
 
         // check group is not a sys.*
         if args.group.starts_with("sys.") {
-            utils::reply_to(
+            utils::reply_to_html(
                 &context,
-                RoomMessageEventContent::text_html(
-                    r#"You are not allowed to make groups with prefix "sys.""#,
-                    r#"You are not allowed to make groups with prefix <code>sys.</code>"#,
-                ),
+                r#"You are not allowed to make groups with prefix "sys.""#,
+                r#"You are not allowed to make groups with prefix <code>sys.</code>"#,
             )
             .await?;
             return Ok(());
@@ -112,11 +115,9 @@ impl Cmd for CmdGroupAdd {
         // check owner exists
         let owner = if let Some(owner) = args.owner {
             if !owner.starts_with("@") || owner.chars().filter(|c| *c == ':').count() != 1 {
-                reply_to(
+                reply_to_plain(
                     &context,
-                    RoomMessageEventContent::text_plain(
-                        "Owner argument malformed: it should be an @mention",
-                    ),
+                    "Owner argument malformed: it should be an @mention",
                 )
                 .await?;
                 return Ok(());
@@ -125,13 +126,13 @@ impl Cmd for CmdGroupAdd {
                 if let Some(user) = User::get(&mut conn, m_user_id, m_user_homeserver)? {
                     user
                 } else {
-                    reply_to(
+                    reply_to_html(
                         &context,
-                        RoomMessageEventContent::text_html(format!(
+                        &format!(
                             "Not created: new group owner {owner} has never joined a room with Merlin"
-                        ), format!(
+                        ), &format!(
                             "Not created: new group owner <b>{owner}</b> has never joined a room with Merlin"
-                        )),
+                        ),
                     )
                     .await?;
                     return Ok(());
@@ -166,24 +167,22 @@ impl Cmd for CmdGroupAdd {
             }
         }
 
-        let mut printer = MessagePrinter::new(context);
-
         let existing_group = Group::find_by_name(&mut conn, &args.group)?;
 
         // check group name has not been used before
         if let Some(existing_group) = existing_group {
-            printer
-                .println(
-                    &format!(
-                        r#"Not created, there is already another group called "{}""#,
-                        existing_group.name()
-                    ),
-                    &format!(
-                        "Not created, there is already another group called <code>{}</code>",
-                        existing_group.name()
-                    ),
-                )
-                .await?;
+            reply_to_html(
+                &context,
+                &format!(
+                    r#"Not created, there is already another group called "{}""#,
+                    existing_group.name()
+                ),
+                &format!(
+                    "Not created, there is already another group called <code>{}</code>",
+                    existing_group.name()
+                ),
+            )
+            .await?;
             return Ok(());
         }
 
@@ -191,12 +190,12 @@ impl Cmd for CmdGroupAdd {
         let admin_group = if let Some(admin_group) = args.admin_group {
             let found_group = Group::find_by_name(&mut conn, &admin_group)?;
             if found_group.is_none() {
-                printer
-                    .println(
-                        &format!("Could not find group with name {admin_group}"),
-                        &format!("Could not find group with name <i>{admin_group}</i>"),
-                    )
-                    .await?;
+                reply_to_html(
+                    &context,
+                    &format!("Could not find group with name {admin_group}"),
+                    &format!("Could not find group with name <i>{admin_group}</i>"),
+                )
+                .await?;
                 return Ok(());
             }
             found_group
@@ -210,7 +209,7 @@ impl Cmd for CmdGroupAdd {
             args.group,
             desc.clone(),
             owner.id(),
-            admin_group.map(|g| g.id()),
+            admin_group.as_ref().map(|g| g.id()),
         )?;
 
         // add users to group
@@ -218,13 +217,52 @@ impl Cmd for CmdGroupAdd {
             add_user_to_group(&mut conn, user.id(), new_group.id())?;
         }
 
+        let mut msg = MessagePrinter::<HtmlMessageBuffer>::new_cmd_reply(context);
+
         // building summary
-        let (users_plain, users_html) = if users.is_empty() {
-            (String::new(), String::new())
+        msg.buffer().println(
+            &format!(r#"Created Group "{}":"#, new_group.name(),),
+            &format!(
+                r#"<b>Created Group <code>{}</code></b><table>"#,
+                new_group.name()
+            ),
+        );
+
+        msg.buffer()
+            .print("\n* Description - ", "<tr><td>Description</td><td>");
+
+        if desc.is_empty() {
+            msg.buffer()
+                .print("[empty string]", "<i>[empty string]</i>")
         } else {
-            let users = users.into_iter().collect::<Vec<_>>();
-            (
-                format!(
+            msg.buffer()
+                .print(desc.as_str(), &html_escape::encode_text(desc.as_str()))
+        }
+
+        msg.buffer().print_html("</td></tr>");
+
+        msg.buffer().print(
+            &format!("\n* Owner - {}:{}", owner.m_id(), owner.m_homeserver()),
+            &format!(
+                "<tr><td>Owner</td><td><b>{}:{}</b></td></tr>",
+                owner.m_id(),
+                owner.m_homeserver()
+            ),
+        );
+
+        if let Some(admin_group) = &admin_group {
+            msg.buffer().print(
+                &format!("\n* Admin group - {}", admin_group.name()),
+                &format!(
+                    "<tr><td>Admin group</td><td><b>{}</b></td></tr>",
+                    admin_group.name()
+                ),
+            );
+        }
+
+        if !users.is_empty() {
+            msg.buffer().print(
+                &format!(
                     "\n* Users - {}",
                     users
                         .iter()
@@ -232,8 +270,8 @@ impl Cmd for CmdGroupAdd {
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Users</td><td>{}</td>",
+                &format!(
+                    "<tr><td>Users</td><td>{}</td>",
                     users
                         .iter()
                         .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
@@ -241,14 +279,12 @@ impl Cmd for CmdGroupAdd {
                         .join(", ")
                 ),
             )
-        };
+        }
 
-        let (malformed_users_plain, malformed_users_html) = if malformed_users.is_empty() {
-            (String::new(), String::new())
-        } else {
+        if !malformed_users.is_empty() {
             let users = malformed_users.into_iter().collect::<Vec<_>>();
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Malformed users (not added) - {}",
                     users
                         .iter()
@@ -256,8 +292,8 @@ impl Cmd for CmdGroupAdd {
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Malformed users (not added)</td><td>{}</td>",
+                &format!(
+                    "<tr><td>Malformed users (not added)</td><td>{}</td>",
                     users
                         .iter()
                         .map(|u| format!("<code>{u}</code>"))
@@ -265,14 +301,12 @@ impl Cmd for CmdGroupAdd {
                         .join(", ")
                 ),
             )
-        };
+        }
 
-        let (missing_users_plain, missing_users_html) = if missing_users.is_empty() {
-            (String::new(), String::new())
-        } else {
+        if !missing_users.is_empty() {
             let users = missing_users.into_iter().collect::<Vec<_>>();
-            (
-                format!(
+            msg.buffer().print(
+                &format!(
                     "\n* Missing users (not added) - {}",
                     users
                         .iter()
@@ -280,8 +314,8 @@ impl Cmd for CmdGroupAdd {
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
-                format!(
-                    "\n<tr><td>Missing users (not added)</td><td>{}</td>",
+                &format!(
+                    "<tr><td>Missing users (not added)</td><td>{}</td>",
                     users
                         .iter()
                         .map(|u| format!("<b>{}</b>", &u[1..]))
@@ -289,39 +323,10 @@ impl Cmd for CmdGroupAdd {
                         .join(", ")
                 ),
             )
-        };
+        }
 
-        let (description_plain, description_html) = if desc.is_empty() {
-            ("[empty string]", "<i>[empty string]</i>".to_string())
-        } else {
-            (
-                desc.as_str(),
-                html_escape::encode_text(desc.as_str()).to_string(),
-            )
-        };
-
-        printer
-            .replace(
-                &format!(
-                    r#"Created Group "{}":
-* Description - {description_plain}
-* Owner - {}:{}{users_plain}{malformed_users_plain}{missing_users_plain}"#,
-                    new_group.name(),
-                    owner.m_id(),
-                    owner.m_homeserver()
-                ),
-                &format!(
-                    r#"<b>Created Group <code>{}</code></b>
-<table>
-<tr><td>Description</td><td>{description_html}</td></tr>
-<tr><td>Owner</td><td><b>{}:{}</b></td></tr>{users_html}{malformed_users_html}{missing_users_html}
-</table>"#,
-                    new_group.name(),
-                    owner.m_id(),
-                    owner.m_homeserver()
-                ),
-            )
-            .await?;
+        msg.buffer().print_html("</table>");
+        msg.flush().await?;
 
         Ok(())
     }

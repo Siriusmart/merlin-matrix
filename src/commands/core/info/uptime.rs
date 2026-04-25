@@ -1,7 +1,7 @@
 use std::{error::Error, time::Instant};
 
 use clap::Parser;
-use matrix_sdk::{async_trait, ruma::events::room::message::RoomMessageEventContent};
+use matrix_sdk::async_trait;
 use tracing::instrument;
 
 use crate::commands::{
@@ -72,11 +72,7 @@ impl Cmd for CmdUptime {
             }
         };
 
-        utils::reply_to(
-            &context,
-            RoomMessageEventContent::text_html(res_body, res_html),
-        )
-        .await?;
+        utils::reply_to_html(&context, &res_body, &res_html).await?;
 
         Ok(())
     }
