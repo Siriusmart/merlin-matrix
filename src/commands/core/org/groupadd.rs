@@ -242,12 +242,8 @@ impl Cmd for CmdGroupAdd {
         msg.buffer().print_html("</td></tr>");
 
         msg.buffer().print(
-            &format!("\n* Owner - {}:{}", owner.m_id(), owner.m_homeserver()),
-            &format!(
-                "<tr><td>Owner</td><td><b>{}:{}</b></td></tr>",
-                owner.m_id(),
-                owner.m_homeserver()
-            ),
+            &format!("\n* Owner - {}", owner.display()),
+            &format!("<tr><td>Owner</td><td><b>{}</b></td></tr>", owner.display(),),
         );
 
         if let Some(admin_group) = &admin_group {
@@ -266,7 +262,7 @@ impl Cmd for CmdGroupAdd {
                     "\n* Users - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("{}", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -274,7 +270,7 @@ impl Cmd for CmdGroupAdd {
                     "<tr><td>Users</td><td>{}</td>",
                     users
                         .iter()
-                        .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("<b>{}</b>", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),

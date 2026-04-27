@@ -412,11 +412,10 @@ impl Cmd for CmdGroupMod {
 
         if let Some(owner) = new_owner {
             msg.buffer().print(
-                &format!("\n* New owner: {}:{}", owner.m_id(), owner.m_homeserver()),
+                &format!("\n* New owner: {}", owner.display()),
                 &format!(
-                    "<tr><td>New owner</td><td><b>{}:{}</b></td></tr>",
-                    owner.m_id(),
-                    owner.m_homeserver()
+                    "<tr><td>New owner</td><td><b>{}</b></td></tr>",
+                    owner.display(),
                 ),
             )
         }
@@ -440,7 +439,7 @@ impl Cmd for CmdGroupMod {
                     "\n* Added users - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("{}", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -448,7 +447,7 @@ impl Cmd for CmdGroupMod {
                     "<tr><td>Added users</td><td>{}</td>",
                     users
                         .iter()
-                        .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("<b>{}</b>", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -462,7 +461,7 @@ impl Cmd for CmdGroupMod {
                     "\n* Removed users - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("{}", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -470,7 +469,7 @@ impl Cmd for CmdGroupMod {
                     "<tr><td>Removed users</td><td>{}</td>",
                     users
                         .iter()
-                        .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("<b>{}</b>", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -550,7 +549,7 @@ impl Cmd for CmdGroupMod {
                     "\n* Users already in group (not added) - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("{}", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -558,7 +557,7 @@ impl Cmd for CmdGroupMod {
                     "<tr><td>Users already in group (not added)</td><td>{}</td>",
                     users
                         .iter()
-                        .map(|u| format!("<b>{}:{}</b>", u.m_id(), u.m_homeserver()))
+                        .map(|u| format!("<b>{}</b>", u.display()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -568,7 +567,7 @@ impl Cmd for CmdGroupMod {
         if !unchanged_remove_users.is_empty() || !missing_remove_users.is_empty() {
             let users = unchanged_remove_users
                 .into_iter()
-                .map(|u| format!("{}:{}", u.m_id(), u.m_homeserver()))
+                .map(|u| format!("{}", u.display()))
                 .chain(missing_remove_users.into_iter().map(|s| s[1..].to_string()))
                 .collect::<Vec<_>>();
             msg.buffer().print(
