@@ -36,6 +36,10 @@ struct NewUser {
 }
 
 impl User {
+    pub fn display(&self) -> String {
+        format!("{}:{}", self.m_id(), self.m_homeserver())
+    }
+
     pub fn id(&self) -> UserId {
         self.user_id
     }

@@ -12,7 +12,7 @@ use crate::org::{
     groups::{GroupId, groups},
     permissions::permissions,
     rooms::rooms,
-    users::{UserId, users},
+    users::{User, UserId, users},
 };
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -154,4 +154,30 @@ pub fn list_user_groups_owned_s(
         .distinct()
         .select(groups::name)
         .get_results(conn)
+}
+
+/// list users in group
+pub fn list_group_members(
+    conn: &mut DatabaseConnection,
+    group_id: GroupId,
+    limit: Option<i64>,
+) -> Result<Vec<User>, diesel::result::Error> {
+    users::table
+        .inner_join(group_users::table.on(group_users::user_id.eq(users::user_id)))
+        .filter(group_users::group_id.eq(group_id))
+        .limit(limit.unwrap_or(i64::MAX))
+        .select(users::all_columns)
+        .get_results(conn)
+}
+
+/// list users in group
+pub fn count_group_members(
+    conn: &mut DatabaseConnection,
+    group_id: GroupId,
+) -> Result<i64, diesel::result::Error> {
+    users::table
+        .inner_join(group_users::table.on(group_users::user_id.eq(users::user_id)))
+        .filter(group_users::group_id.eq(group_id))
+        .count()
+        .get_result(conn)
 }
