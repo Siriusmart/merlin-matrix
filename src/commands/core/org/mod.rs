@@ -1,21 +1,8 @@
-use crate::commands::{
-    CmdIndex,
-    core::org::{
-        groupadd::CmdGroupAdd, groupdel::CmdGroupDel, groupinfo::CmdGroupInfo,
-        groupmod::CmdGroupMod, groups::CmdGroups,
-    },
-};
+use crate::commands::CmdIndex;
 
-mod groupadd;
-mod groupdel;
-mod groupinfo;
-mod groupmod;
 mod groups;
+mod contexts;
 
 pub fn register(index: &mut CmdIndex) {
-    index.register("groupadd", CmdGroupAdd);
-    index.register("groupmod", CmdGroupMod);
-    index.register("groups", CmdGroups);
-    index.register("groupdel", CmdGroupDel);
-    index.register("groupinfo", CmdGroupInfo);
+    groups::register(index);
 }
