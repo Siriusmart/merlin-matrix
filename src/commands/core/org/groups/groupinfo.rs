@@ -6,7 +6,7 @@ use matrix_sdk::async_trait;
 use crate::{
     commands::{
         Cmd, CmdContext,
-        utils::{HtmlMessageBuffer, MessagePrinter, arg_parse, reply_to_html},
+        utils::{ErrorMsg, HtmlMessageBuffer, MessagePrinter, arg_parse, reply_to_html},
     },
     org::{
         Database,
@@ -57,8 +57,9 @@ impl Cmd for CmdGroupInfo {
             return Ok(());
         };
 
-        let owner = User::get_with_id(&mut conn, group.owner())?
-            .expect("owner must exist due to foreign key constraint");
+        let owner = User::get_with_id(&mut conn, group.owner())?.ok_or(ErrorMsg(
+            "owner must exist due to foreign key constraint".to_string(),
+        ))?;
         let admin_group = if let Some(admin_group_id) = group.admin_group() {
             Group::find(&mut conn, admin_group_id)?
         } else {

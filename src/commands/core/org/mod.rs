@@ -1,8 +1,9 @@
 use crate::commands::CmdIndex;
 
-mod groups;
 mod contexts;
+mod groups;
 
 pub fn register(index: &mut CmdIndex) {
     groups::register(index);
+    contexts::register(index);
 }

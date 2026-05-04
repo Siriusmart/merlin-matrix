@@ -21,7 +21,6 @@ pub struct RoomId(i32);
 pub struct Room {
     room_id: RoomId,
     m_room_id: String,
-    m_room_homeserver: String,
     context_id: Option<ContextId>,
 }
 
@@ -30,19 +29,24 @@ pub struct Room {
 #[diesel(check_for_backend(Sqlite))]
 struct NewRoom {
     m_room_id: String,
-    m_room_homeserver: String,
+}
+
+impl Room {
+    pub fn id(&self) -> RoomId {
+        self.room_id
+    }
+
+    pub fn context_id(&self) -> Option<ContextId> {
+        self.context_id
+    }
 }
 
 impl Room {
     pub fn get_or_create(
         conn: &mut DatabaseConnection,
         m_room_id: String,
-        m_room_homeserver: String,
     ) -> Result<Room, Box<dyn Error>> {
-        let new_room = NewRoom {
-            m_room_id,
-            m_room_homeserver,
-        };
+        let new_room = NewRoom { m_room_id };
 
         diesel::insert_into(rooms::table)
             .values(&new_room)
@@ -51,7 +55,6 @@ impl Room {
 
         Ok(rooms::table
             .filter(rooms::m_room_id.eq(new_room.m_room_id))
-            .filter(rooms::m_room_homeserver.eq(new_room.m_room_homeserver))
             .first(conn)?)
     }
 

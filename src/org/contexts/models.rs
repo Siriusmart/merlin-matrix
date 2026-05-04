@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use diesel::{
-    RunQueryDsl, Selectable, SelectableHelper,
+    ExpressionMethods, QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
     prelude::{Associations, Identifiable, Insertable, Queryable},
     sqlite::Sqlite,
 };
@@ -34,6 +34,17 @@ struct NewContext {
     name: String,
     description: String,
     owner_id: UserId,
+    admin_group_id: Option<GroupId>,
+}
+
+impl Context {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn id(&self) -> ContextId {
+        self.context_id
+    }
 }
 
 impl Context {
@@ -42,16 +53,65 @@ impl Context {
         name: String,
         description: String,
         owner_id: UserId,
+        admin_group_id: Option<GroupId>,
     ) -> Result<Self, Box<dyn Error>> {
         let new_context = NewContext {
             name,
             description,
             owner_id,
+            admin_group_id,
         };
 
         Ok(diesel::insert_into(contexts::table)
             .values(new_context)
             .returning(Context::as_returning())
             .get_result(conn)?)
+    }
+
+    /// validate group name: ascii alnum with ._-, and at least one . for workspace depth
+    pub fn validate_name(name: &str) -> bool {
+        name.contains(".")
+            && name.split('.').all(|chunk| !chunk.is_empty())
+            && name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+    }
+
+    pub fn desc_max_len() -> usize {
+        150
+    }
+
+    /// - Ok(Some) if found
+    /// - Ok(None) if not found
+    pub fn find(
+        conn: &mut DatabaseConnection,
+        context_id: ContextId,
+    ) -> Result<Option<Self>, Box<dyn Error>> {
+        match contexts::table
+            .filter(contexts::context_id.eq(context_id))
+            .select(Context::as_select())
+            .first(conn)
+        {
+            Ok(group) => Ok(Some(group)),
+            Err(diesel::NotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    /// - Ok(Some) if found
+    /// - Ok(None) if not found
+    pub fn find_by_name(
+        conn: &mut DatabaseConnection,
+        name: &str,
+    ) -> Result<Option<Self>, Box<dyn Error>> {
+        match contexts::table
+            .filter(contexts::name.eq(name))
+            .select(Context::as_select())
+            .first(conn)
+        {
+            Ok(group) => Ok(Some(group)),
+            Err(diesel::NotFound) => Ok(None),
+            Err(err) => Err(err.into()),
+        }
     }
 }

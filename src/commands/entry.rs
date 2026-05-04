@@ -33,30 +33,22 @@ pub async fn on_command(
 
     let mut allowed = cmd.default_permission();
 
-    let Some((room_localpart, room_homeserver)) = room.room_id().as_str()[1..].split_once(":")
-    else {
-        error!(
-            "Could not find room localpart and homeserver from room_id={}",
-            room.room_id().as_str()
-        );
-        return;
-    };
-
     for &qualifier in cmd.permissions() {
         let res = match user_has_permission(
             &mut Database::conn(),
             event.sender.localpart(),
             event.sender.server_name().as_str(),
-            room_localpart,
-            room_homeserver,
+            room.room_id().strip_sigil(),
             qualifier,
         ) {
             Ok(res) => res,
             Err(e) => {
                 error!(
-                    "Could not fetch permissions user={}:{} room={room_localpart}:{room_homeserver} qualifier={qualifier} reason={e}",
+                    "Could not fetch permissions user={}:{} room={} ({}) qualifier={qualifier} reason={e}",
                     event.sender.localpart(),
-                    event.sender.server_name().as_str()
+                    event.sender.server_name().as_str(),
+                    room.room_id().strip_sigil(),
+                    room.name().as_deref().unwrap_or("no name")
                 );
                 return;
             }
@@ -70,17 +62,21 @@ pub async fn on_command(
 
     if !allowed {
         debug!(
-            "Command denied args={args:?} user={}:{} room={room_localpart}:{room_homeserver}",
+            "Command denied args={args:?} user={}:{} room={} ({})",
             event.sender.localpart(),
-            event.sender.server_name().as_str()
+            event.sender.server_name().as_str(),
+            room.room_id(),
+            room.name().as_deref().unwrap_or("no name")
         );
         return;
     }
 
     debug!(
-        "Command allowed args={args:?} user={}:{} room={room_localpart}:{room_homeserver}",
+        "Command allowed args={args:?} user={}:{} room={} ({})",
         event.sender.localpart(),
-        event.sender.server_name().as_str()
+        event.sender.server_name().as_str(),
+        room.room_id(),
+        room.name().as_deref().unwrap_or("no name")
     );
 
     let context = CmdContext::new(client, event, room.clone(), args.clone());
@@ -92,9 +88,11 @@ pub async fn on_command(
 
         if let Err(e) = &res {
             error!(
-                "Command error={e:?} args={args:?} user={}:{} room={room_localpart}:{room_homeserver}",
+                "Command error={e:?} args={args:?} user={}:{} room={} ({})",
                 context.event.sender.localpart(),
-                context.event.sender.server_name().as_str()
+                context.event.sender.server_name().as_str(),
+                room.room_id(),
+                room.name().as_deref().unwrap_or("no name")
             );
 
             Some(RoomMessageEventContent::text_html(

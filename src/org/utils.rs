@@ -8,10 +8,11 @@ use diesel::{
 use crate::org::{
     DatabaseConnection,
     context_permissions::context_permissions,
+    contexts::ContextId,
     group_users::{GroupUser, group_users},
     groups::{GroupId, groups},
     permissions::permissions,
-    rooms::rooms,
+    rooms::{RoomId, rooms},
     users::{User, UserId, users},
 };
 
@@ -30,7 +31,6 @@ pub fn user_has_permission(
     m_user_id: &str,
     m_user_homeserver: &str,
     m_room_id: &str,
-    m_room_homeserver: &str,
     permission_qualifier: &str,
 ) -> Result<Option<bool>, Box<dyn Error>> {
     let user_groups = users::table
@@ -52,7 +52,6 @@ pub fn user_has_permission(
         )
         .filter(permissions::qualifier.eq(permission_qualifier))
         .filter(rooms::m_room_id.eq(m_room_id))
-        .filter(rooms::m_room_homeserver.eq(m_room_homeserver))
         .filter(context_permissions::group_id.eq_any(user_groups))
         .order_by(context_permissions::priority.asc())
         .then_order_by(context_permissions::permission_id.asc())
@@ -180,4 +179,16 @@ pub fn count_group_members(
         .filter(group_users::group_id.eq(group_id))
         .count()
         .get_result(conn)
+}
+
+pub fn set_room_context(
+    conn: &mut DatabaseConnection,
+    room_id: RoomId,
+    context: Option<ContextId>,
+) -> Result<(), diesel::result::Error> {
+    diesel::update(rooms::table)
+        .filter(rooms::room_id.eq(room_id))
+        .set(rooms::context_id.eq(context))
+        .execute(conn)?;
+    Ok(())
 }
