@@ -197,6 +197,8 @@ impl Cmd for CmdContextAdd {
             admin_group.as_ref().map(|g| g.id()),
         )?;
 
+        drop(conn);
+
         // attach room to new context id if specified
         // - if no attach requested, return none
         // - if attach succeeded, return Some(Ok(previous context))
@@ -210,6 +212,8 @@ impl Cmd for CmdContextAdd {
                 .unwrap_or(power_levels.users_default)
                 .into();
 
+            let mut conn = Database::conn();
+
             Some(if user_level >= 100 {
                 let room = Room::get_or_create(
                     &mut conn,
@@ -219,7 +223,7 @@ impl Cmd for CmdContextAdd {
                 set_room_context(&mut conn, room.id(), Some(new_context.id()))?;
                 Ok(room.context_id())
             } else {
-                Err("no permission: require permission level 100")
+                Err("no permission: require room permission level 100")
             })
         } else {
             None
@@ -263,6 +267,8 @@ impl Cmd for CmdContextAdd {
                 ),
             );
         }
+
+        let mut conn = Database::conn();
 
         if let Some(attach_res) = attach_res {
             match attach_res {

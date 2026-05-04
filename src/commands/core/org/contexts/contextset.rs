@@ -78,7 +78,7 @@ impl Cmd for CmdContextSet {
                 set_room_context(&mut conn, room.id(), Some(requested_context.id()))?;
                 Ok(room.context_id())
             } else {
-                Err("no permission: require permission level 100")
+                Err("no permission: require room permission level 100")
             }
         };
 
