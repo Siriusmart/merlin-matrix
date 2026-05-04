@@ -262,7 +262,7 @@ impl Cmd for CmdGroupAdd {
                     "\n* Users - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}", u.display()))
+                        .map(|u| u.display().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),

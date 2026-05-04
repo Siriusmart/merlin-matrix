@@ -439,7 +439,7 @@ impl Cmd for CmdGroupMod {
                     "\n* Added users - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}", u.display()))
+                        .map(|u| u.display().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -461,7 +461,7 @@ impl Cmd for CmdGroupMod {
                     "\n* Removed users - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}", u.display()))
+                        .map(|u| u.display().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -549,7 +549,7 @@ impl Cmd for CmdGroupMod {
                     "\n* Users already in group (not added) - {}",
                     users
                         .iter()
-                        .map(|u| format!("{}", u.display()))
+                        .map(|u| u.display().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
@@ -567,7 +567,7 @@ impl Cmd for CmdGroupMod {
         if !unchanged_remove_users.is_empty() || !missing_remove_users.is_empty() {
             let users = unchanged_remove_users
                 .into_iter()
-                .map(|u| format!("{}", u.display()))
+                .map(|u| u.display().to_string())
                 .chain(missing_remove_users.into_iter().map(|s| s[1..].to_string()))
                 .collect::<Vec<_>>();
             msg.buffer().print(

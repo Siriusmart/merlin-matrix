@@ -6,7 +6,10 @@ use diesel::{
     sqlite::Sqlite,
 };
 
-use crate::org::{DatabaseConnection, contexts::schema::contexts, groups::GroupId, users::UserId};
+use crate::org::{
+    DatabaseConnection, context_permissions::context_permissions, contexts::schema::contexts,
+    groups::GroupId, rooms::rooms, users::UserId,
+};
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ContextId(i32);
@@ -44,6 +47,10 @@ impl Context {
 
     pub fn id(&self) -> ContextId {
         self.context_id
+    }
+
+    pub fn owner(&self) -> UserId {
+        self.owner_id
     }
 }
 
@@ -113,5 +120,19 @@ impl Context {
             Err(diesel::NotFound) => Ok(None),
             Err(err) => Err(err.into()),
         }
+    }
+
+    pub fn delete(self, conn: &mut DatabaseConnection) -> Result<(), diesel::result::Error> {
+        diesel::delete(context_permissions::table)
+            .filter(context_permissions::context_id.eq(self.id()))
+            .execute(conn)?;
+        diesel::delete(contexts::table)
+            .filter(contexts::context_id.eq(self.id()))
+            .execute(conn)?;
+        diesel::update(rooms::table)
+            .set(rooms::context_id.eq(None::<ContextId>))
+            .execute(conn)?;
+
+        Ok(())
     }
 }

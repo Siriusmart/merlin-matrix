@@ -295,7 +295,7 @@ impl Cmd for CmdContextAdd {
                 }
                 Err(err) => {
                     msg.buffer().print(
-                        &format!("\n* Attach to room - failed, err",),
+                        "\n* Attach to room - failed, err",
                         &format!("<tr><td>Attach to room</td><td>Failed, {err}</td></tr>",),
                     );
                 }
