@@ -2,6 +2,7 @@ use std::error::Error;
 
 use clap::Parser;
 use matrix_sdk::async_trait;
+use tracing::instrument;
 
 use crate::{
     commands::{
@@ -43,6 +44,7 @@ impl Cmd for CmdGroups {
         true
     }
 
+    #[instrument(skip_all)]
     async fn invoke(&self, context: CmdContext) -> Result<(), Box<dyn Error>> {
         let Some(args) = arg_parse::<CmdGroupsArg>(&context).await? else {
             return Ok(());

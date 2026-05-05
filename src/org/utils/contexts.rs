@@ -2,6 +2,7 @@ use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl,
     RunQueryDsl, SqliteExpressionMethods,
 };
+use tracing::*;
 
 use crate::org::{
     DatabaseConnection,
@@ -13,11 +14,13 @@ use crate::org::{
     users::users,
 };
 
+#[instrument(skip_all)]
 pub fn set_room_context(
     conn: &mut DatabaseConnection,
     room_id: RoomId,
     context: Option<ContextId>,
 ) -> Result<(), diesel::result::Error> {
+    trace!("room_id={room_id:?} context={context:?}");
     diesel::update(rooms::table)
         .filter(rooms::room_id.eq(room_id))
         .set(rooms::context_id.eq(context))
@@ -26,6 +29,7 @@ pub fn set_room_context(
 }
 
 /// check if user has a specified permission in a context
+#[instrument(skip_all)]
 pub fn user_has_permission(
     conn: &mut DatabaseConnection,
     m_user_id: &str,
@@ -33,6 +37,10 @@ pub fn user_has_permission(
     m_room_id: &str,
     permission_qualifier: &str,
 ) -> Result<Option<bool>, diesel::result::Error> {
+    trace!(
+        "m_user_id={m_user_id} m_user_homeserver={m_user_homeserver} m_room_id={m_room_id} qualifier={permission_qualifier}"
+    );
+
     let user_groups = users::table
         .inner_join(table.on(group_users::user_id.eq(users::user_id)))
         .filter(users::m_user_id.eq(m_user_id))
