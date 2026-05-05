@@ -11,7 +11,7 @@ use crate::{
             self, HtmlMessageBuffer, MessagePrinter, arg_parse, reply_to_html, reply_to_plain,
         },
     },
-    org::{Database, groups::Group, users::User, utils::add_user_to_group},
+    org::{Database, groups::Group, users::User, utils::groups::add_user_to_group},
 };
 
 pub struct CmdGroupAdd;

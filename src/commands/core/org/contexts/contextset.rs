@@ -12,7 +12,7 @@ use crate::{
         Database,
         contexts::{Context, ContextId},
         rooms::Room,
-        utils::set_room_context,
+        utils::contexts::set_room_context,
     },
 };
 use tracing::*;

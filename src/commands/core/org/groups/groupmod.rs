@@ -15,7 +15,7 @@ use crate::{
         Database,
         groups::Group,
         users::User,
-        utils::{add_user_to_group, remove_user_from_group, user_id_in_group_id},
+        utils::groups::{add_user_to_group, remove_user_from_group, user_id_in_group_id},
     },
 };
 

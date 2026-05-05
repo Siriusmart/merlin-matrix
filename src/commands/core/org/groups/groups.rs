@@ -10,7 +10,7 @@ use crate::{
     },
     org::{
         Database,
-        utils::{list_user_groups_admin_s, list_user_groups_owned_s, list_user_groups_s},
+        utils::groups::{list_user_groups_admin_s, list_user_groups_owned_s, list_user_groups_s},
     },
 };
 

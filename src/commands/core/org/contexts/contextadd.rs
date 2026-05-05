@@ -18,7 +18,7 @@ use crate::{
         groups::Group,
         rooms::Room,
         users::User,
-        utils::set_room_context,
+        utils::contexts::set_room_context,
     },
 };
 

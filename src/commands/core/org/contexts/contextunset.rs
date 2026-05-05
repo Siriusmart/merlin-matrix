@@ -9,7 +9,7 @@ use crate::{
         Cmd, CmdContext,
         utils::{ErrorMsg, arg_parse, reply_to_html, reply_to_plain},
     },
-    org::{Database, contexts::Context, rooms::Room, utils::set_room_context},
+    org::{Database, contexts::Context, rooms::Room, utils::contexts::set_room_context},
 };
 
 pub struct CmdContextUnset;

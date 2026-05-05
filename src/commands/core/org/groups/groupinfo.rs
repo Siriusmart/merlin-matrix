@@ -12,7 +12,7 @@ use crate::{
         Database,
         groups::Group,
         users::User,
-        utils::{count_group_members, list_group_members},
+        utils::groups::{count_group_members, list_group_members},
     },
 };
 

@@ -10,7 +10,7 @@ use crate::{
         cmd::{CmdContext, CmdIndex},
         utils::reply_to,
     },
-    org::{Database, utils::user_has_permission},
+    org::{Database, utils::contexts::user_has_permission},
 };
 
 pub async fn on_command(
