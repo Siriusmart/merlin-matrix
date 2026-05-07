@@ -8,22 +8,10 @@ use tracing::*;
 
 use crate::org::{
     DatabaseConnection,
-    context_permissions::context_permissions,
     group_users::{GroupUser, group_users},
     groups::{GroupId, groups},
-    permissions::permissions,
-    rooms::rooms,
     users::{User, UserId, users},
 };
-
-diesel::allow_tables_to_appear_in_same_query!(
-    rooms,
-    context_permissions,
-    users,
-    group_users,
-    groups,
-    permissions,
-);
 
 /// add user to group, return Ok(true) is user is previously not in group and now added to group
 #[instrument(skip_all)]

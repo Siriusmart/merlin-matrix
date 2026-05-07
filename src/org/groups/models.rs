@@ -87,6 +87,10 @@ impl Group {
     pub fn admin_group(&self) -> Option<GroupId> {
         self.admin_group_id
     }
+
+    pub fn desc(&self) -> &str {
+        &self.description
+    }
 }
 
 impl Group {

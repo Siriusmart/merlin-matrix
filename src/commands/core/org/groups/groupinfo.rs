@@ -22,6 +22,7 @@ pub struct CmdGroupInfo;
 #[derive(Parser)]
 #[command(name = "GroupInfo", version = "0.1.0", about = "Show group info")]
 struct CmdGroupInfoArgs {
+    /// name of the group
     group: String,
 }
 
@@ -53,7 +54,10 @@ impl Cmd for CmdGroupInfo {
             reply_to_html(
                 &context,
                 &format!("Could not find any groups named \"{}\"", args.group),
-                &format!("Could not find any groups named <b>{}</b>", args.group),
+                &format!(
+                    "Could not find any groups named <b>{}</b>",
+                    html_escape::encode_text(&args.group)
+                ),
             )
             .await?;
             return Ok(());
@@ -79,6 +83,20 @@ impl Cmd for CmdGroupInfo {
         );
 
         msg.buffer().print_html("<table>");
+        if group.desc().is_empty() {
+            msg.buffer().print(
+                "\n* Description - [empty string]",
+                "<tr><td>Description</td><td><i>[empty string]</i></td></tr>",
+            );
+        } else {
+            msg.buffer().print(
+                &format!("\n* Description - {}", group.desc()),
+                &format!(
+                    "<tr><td>Description</td><td>{}</td></tr>",
+                    html_escape::encode_text(group.desc())
+                ),
+            );
+        }
         msg.buffer().print(
             &format!("\n* Owner - {}", owner.display()),
             &format!("<tr><td>Owner</td><td><b>{}</b></td></tr>", owner.display()),

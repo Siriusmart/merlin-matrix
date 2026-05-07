@@ -52,6 +52,14 @@ impl Context {
     pub fn owner(&self) -> UserId {
         self.owner_id
     }
+
+    pub fn admin_group(&self) -> Option<GroupId> {
+        self.admin_group_id
+    }
+
+    pub fn desc(&self) -> &str {
+        &self.description
+    }
 }
 
 impl Context {
