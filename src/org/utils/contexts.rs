@@ -61,7 +61,7 @@ pub fn user_has_permission(
         .filter(permissions::qualifier.eq(permission_qualifier))
         .filter(rooms::m_room_id.eq(m_room_id))
         .filter(context_permissions::group_id.eq_any(user_groups))
-        .order_by(context_permissions::priority.asc())
+        .order_by(context_permissions::priority.desc())
         .then_order_by(context_permissions::permission_id.asc())
         .select(context_permissions::allowed)
         .first::<bool>(conn)
