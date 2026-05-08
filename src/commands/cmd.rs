@@ -9,6 +9,8 @@ use matrix_sdk::{
     Client, Room, async_trait, ruma::events::room::message::OriginalSyncRoomMessageEvent,
 };
 
+use crate::org::{Database, permissions::Permission};
+
 /// event information passed to the command program
 #[derive(Clone)]
 pub struct CmdContext(Arc<CmdContextInner>);
@@ -65,6 +67,13 @@ pub struct CmdIndex(HashMap<String, Box<dyn Cmd>>);
 
 impl CmdIndex {
     pub fn register<C: Cmd + 'static>(&mut self, name: &'static str, cmd: C) {
+        let mut conn = Database::conn();
+
+        for perm in cmd.permissions() {
+            Permission::ensure_exists(&mut conn, perm.to_string())
+                .expect("db connection error on boot up");
+        }
+
         if self.0.insert(name.to_string(), Box::new(cmd)).is_some() {
             panic!("Command clash: name={name}")
         }
