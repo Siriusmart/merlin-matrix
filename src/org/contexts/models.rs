@@ -2,7 +2,7 @@ use std::error::Error;
 
 use diesel::{
     ExpressionMethods, QueryDsl, RunQueryDsl, Selectable, SelectableHelper,
-    prelude::{Associations, Identifiable, Insertable, Queryable},
+    prelude::{AsChangeset, Associations, Identifiable, Insertable, Queryable},
     sqlite::Sqlite,
 };
 
@@ -38,6 +38,25 @@ struct NewContext {
     description: String,
     owner_id: UserId,
     admin_group_id: Option<GroupId>,
+}
+
+#[derive(AsChangeset)]
+#[diesel(table_name = contexts)]
+#[diesel(check_for_backend(Sqlite))]
+struct UpdateContext {
+    name: Option<String>,
+    description: Option<String>,
+    owner_id: Option<UserId>,
+    admin_group_id: Option<Option<GroupId>>,
+}
+
+impl UpdateContext {
+    pub fn is_empty(&self) -> bool {
+        self.name.is_none()
+            && self.description.is_none()
+            && self.owner_id.is_none()
+            && self.admin_group_id.is_none()
+    }
 }
 
 impl Context {
@@ -139,6 +158,32 @@ impl Context {
             .execute(conn)?;
         diesel::update(rooms::table)
             .set(rooms::context_id.eq(None::<ContextId>))
+            .execute(conn)?;
+
+        Ok(())
+    }
+
+    pub fn update(
+        conn: &mut DatabaseConnection,
+        context_id: ContextId,
+        name: Option<String>,
+        desc: Option<String>,
+        owner_id: Option<UserId>,
+        admin_group_id: Option<Option<GroupId>>,
+    ) -> Result<(), diesel::result::Error> {
+        let changeset = UpdateContext {
+            name,
+            description: desc,
+            owner_id,
+            admin_group_id,
+        };
+
+        if changeset.is_empty() {
+            return Ok(());
+        }
+
+        diesel::update(contexts::table.filter(contexts::context_id.eq(context_id)))
+            .set(changeset)
             .execute(conn)?;
 
         Ok(())
