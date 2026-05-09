@@ -138,6 +138,6 @@ impl Cmd for CmdContextDel {
         msg.buffer().print_html("</table>");
         msg.flush().await?;
 
-        todo!()
+        Ok(())
     }
 }

@@ -1,5 +1,8 @@
 use diesel::{
-    ExpressionMethods, OptionalExtension, RunQueryDsl, Selectable, prelude::{Identifiable, Insertable, Queryable}, query_dsl::methods::{FilterDsl, SelectDsl}, sqlite::Sqlite
+    ExpressionMethods, OptionalExtension, RunQueryDsl, Selectable,
+    prelude::{Identifiable, Insertable, Queryable},
+    query_dsl::methods::{FilterDsl, SelectDsl},
+    sqlite::Sqlite,
 };
 
 use crate::org::{DatabaseConnection, permissions::permissions};
@@ -29,7 +32,7 @@ impl Permission {
     }
 
     pub fn name(&self) -> &str {
-         &self.qualifier
+        &self.qualifier
     }
 }
 

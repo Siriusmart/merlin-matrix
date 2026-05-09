@@ -1,7 +1,6 @@
 use diesel::{
     ExpressionMethods, RunQueryDsl, Selectable,
     prelude::{Associations, Identifiable, Insertable, Queryable},
-    query_dsl::methods::FilterDsl,
     sqlite::Sqlite,
 };
 

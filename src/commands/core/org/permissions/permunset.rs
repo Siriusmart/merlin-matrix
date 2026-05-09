@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use clap::{ArgAction, Parser, builder::BoolishValueParser};
+use clap::Parser;
 use matrix_sdk::async_trait;
 use tracing::instrument;
 
@@ -11,7 +11,7 @@ use crate::{
     },
     org::{
         Database,
-        context_permissions::{ContextPermission, ContextPermissionPriority},
+        context_permissions::ContextPermission,
         contexts::Context,
         groups::Group,
         permissions::Permission,
@@ -20,34 +20,28 @@ use crate::{
     },
 };
 
-pub struct CmdPermSet;
+pub struct CmdPermUnset;
 
 #[derive(Parser)]
 #[command(
-    name = "PermSet",
+    name = "PermUnset",
     version = "0.1.0",
-    about = "Set a permission for a group in a context"
+    about = "Unset a permission for a group in a context"
 )]
-struct CmdPermSetArgs {
+struct CmdPermUnsetArgs {
     /// Group to set the permission for
     group: String,
     /// Qualifier of permission
     perm: String,
-    /// Whether permission is set to allowed or not allowed
-    #[arg(value_parser = BoolishValueParser::new(), action = ArgAction::Set)]
-    allowed: bool,
     /// Context to set the perm in, default to current room context
     context: Option<String>,
-    /// Order at which rules are checked (rule with higher priority overwrites rule with lower priority)
-    #[arg(long = "priority", short = 'p')]
-    priority: Option<i32>,
 }
 
 #[async_trait]
-impl Cmd for CmdPermSet {
+impl Cmd for CmdPermUnset {
     fn permissions(&self) -> &[&str] {
         &[
-            "core.org.perm.set",
+            "core.org.perm.unset",
             "core.org.perm",
             "core.org",
             "core",
@@ -61,7 +55,7 @@ impl Cmd for CmdPermSet {
 
     #[instrument(skip_all)]
     async fn invoke(&self, context: CmdContext) -> Result<(), Box<dyn Error>> {
-        let Some(args) = arg_parse::<CmdPermSetArgs>(&context).await? else {
+        let Some(args) = arg_parse::<CmdPermUnsetArgs>(&context).await? else {
             return Ok(());
         };
 
@@ -131,42 +125,14 @@ impl Cmd for CmdPermSet {
             return Ok(());
         };
 
-        ContextPermission::set(
+        ContextPermission::unset(
             &mut conn,
             permission.id(),
             group.id(),
             context_to_modify.id(),
-            ContextPermissionPriority::new(args.priority.unwrap_or(0)),
-            args.allowed,
         )?;
 
-        reply_to_html(
-            &context,
-            &format!(
-                r#"Context Permission Set
-* Context - {}
-* Permission - {}
-* Group - {}
-* Allowed - {}"#,
-                context_to_modify.name(),
-                permission.name(),
-                group.name(),
-                args.allowed
-            ),
-            &format!(
-                r#"<b>Context Permission Set</b><table>
-<tr><td>Context</td><td><b>{}</b></td></tr>
-<tr><td>Permission</td><td><b>{}</b></td></tr>
-<tr><td>Group</td><td><b>{}</b></td></tr>
-<tr><td>Allowed</td><td><b>{}</b></td></tr>
-</table>"#,
-                context_to_modify.name(),
-                permission.name(),
-                group.name(),
-                args.allowed
-            ),
-        )
-        .await?;
+        reply_to_plain(&context, "Context permission unset successfully").await?;
 
         Ok(())
     }
