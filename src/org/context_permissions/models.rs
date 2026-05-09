@@ -1,16 +1,23 @@
 use diesel::{
-    Selectable,
+    ExpressionMethods, RunQueryDsl, Selectable,
     prelude::{Associations, Identifiable, Insertable, Queryable},
+    query_dsl::methods::FilterDsl,
     sqlite::Sqlite,
 };
 
 use crate::org::{
-    context_permissions::schema::context_permissions, contexts::ContextId, groups::GroupId,
-    permissions::PermissionId,
+    DatabaseConnection, context_permissions::schema::context_permissions, contexts::ContextId,
+    groups::GroupId, permissions::PermissionId,
 };
 
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ContextPermissionPriority(i32);
+
+impl ContextPermissionPriority {
+    pub fn new(value: i32) -> Self {
+        Self(value)
+    }
+}
 
 /// value of a permission in a context
 #[derive(Selectable, Queryable, Insertable, Identifiable, Associations)]
@@ -26,4 +33,41 @@ pub struct ContextPermission {
     context_id: ContextId,
     priority: ContextPermissionPriority,
     allowed: bool,
+}
+
+impl ContextPermission {
+    pub fn set(
+        conn: &mut DatabaseConnection,
+        permission_id: PermissionId,
+        group_id: GroupId,
+        context_id: ContextId,
+        priority: ContextPermissionPriority,
+        allowed: bool,
+    ) -> Result<(), diesel::result::Error> {
+        diesel::replace_into(context_permissions::table)
+            .values(ContextPermission {
+                permission_id,
+                group_id,
+                context_id,
+                priority,
+                allowed,
+            })
+            .on_conflict_do_nothing()
+            .execute(conn)?;
+        Ok(())
+    }
+
+    pub fn unset(
+        conn: &mut DatabaseConnection,
+        permission_id: PermissionId,
+        group_id: GroupId,
+        context_id: ContextId,
+    ) -> Result<(), diesel::result::Error> {
+        diesel::delete(context_permissions::table)
+            .filter(context_permissions::context_id.eq(context_id))
+            .filter(context_permissions::group_id.eq(group_id))
+            .filter(context_permissions::permission_id.eq(permission_id))
+            .execute(conn)?;
+        Ok(())
+    }
 }

@@ -1,7 +1,5 @@
 use diesel::{
-    RunQueryDsl, Selectable,
-    prelude::{Identifiable, Insertable, Queryable},
-    sqlite::Sqlite,
+    ExpressionMethods, OptionalExtension, RunQueryDsl, Selectable, prelude::{Identifiable, Insertable, Queryable}, query_dsl::methods::{FilterDsl, SelectDsl}, sqlite::Sqlite
 };
 
 use crate::org::{DatabaseConnection, permissions::permissions};
@@ -26,6 +24,16 @@ struct NewPermission {
 }
 
 impl Permission {
+    pub fn id(&self) -> PermissionId {
+        self.permission_id
+    }
+
+    pub fn name(&self) -> &str {
+         &self.qualifier
+    }
+}
+
+impl Permission {
     /// insert into table if not exist
     pub fn ensure_exists(
         conn: &mut DatabaseConnection,
@@ -37,5 +45,16 @@ impl Permission {
             .execute(conn)?;
 
         Ok(())
+    }
+
+    pub fn find_by_name(
+        conn: &mut DatabaseConnection,
+        qualifier: &str,
+    ) -> Result<Option<Self>, diesel::result::Error> {
+        permissions::table
+            .filter(permissions::qualifier.eq(qualifier))
+            .select(permissions::all_columns)
+            .first(conn)
+            .optional()
     }
 }
