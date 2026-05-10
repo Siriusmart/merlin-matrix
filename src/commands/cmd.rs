@@ -63,7 +63,7 @@ pub trait Cmd: Sync + Send {
 
 static CMD_INDEX: OnceLock<CmdIndex> = OnceLock::new();
 
-pub struct CmdIndex(HashMap<String, Box<dyn Cmd>>);
+pub struct CmdIndex(HashMap<String, Arc<dyn Cmd>>);
 
 impl CmdIndex {
     pub fn register<C: Cmd + 'static>(&mut self, name: &'static str, cmd: C) {
@@ -74,13 +74,13 @@ impl CmdIndex {
                 .expect("db connection error on boot up");
         }
 
-        if self.0.insert(name.to_string(), Box::new(cmd)).is_some() {
+        if self.0.insert(name.to_string(), Arc::new(cmd)).is_some() {
             panic!("Command clash: name={name}")
         }
     }
 
-    pub fn get(name: &str) -> Option<&dyn Cmd> {
-        CMD_INDEX.get().unwrap().0.get(name).map(Box::as_ref)
+    pub fn get(name: &str) -> Option<Arc<dyn Cmd>> {
+        CMD_INDEX.get().unwrap().0.get(name).cloned()
     }
 
     pub fn lock(self) {

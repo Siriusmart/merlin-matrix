@@ -81,30 +81,35 @@ pub async fn on_command(
 
     let context = CmdContext::new(client, event, room.clone(), args.clone());
 
-    // scope so the compiler async check knows res is not held across an await
-    // (it ignores drop() for some reason)
-    let err_content = {
-        let res = cmd.invoke(context.clone()).await;
+    tokio::spawn(
+        async move {
+            // scope so the compiler async check knows res is not held across an await
+            // (it ignores drop() for some reason)
+            let err_content = {
+                let res = cmd.invoke(context.clone()).await;
 
-        if let Err(e) = &res {
-            error!(
-                "Command error={e:?} args={args:?} user={}:{} room={} ({})",
-                context.event.sender.localpart(),
-                context.event.sender.server_name().as_str(),
-                room.room_id(),
-                room.name().as_deref().unwrap_or("no name")
-            );
+                if let Err(e) = &res {
+                    error!(
+                        "Command error={e:?} args={args:?} user={}:{} room={} ({})",
+                        context.event.sender.localpart(),
+                        context.event.sender.server_name().as_str(),
+                        room.room_id(),
+                        room.name().as_deref().unwrap_or("no name")
+                    );
 
-            Some(RoomMessageEventContent::text_html(
-                format!("Oops, that's a crash\n{e:?}"),
-                format!("Oops, that's a crash<br><pre>{e:?}</pre>"),
-            ))
-        } else {
-            None
+                    Some(RoomMessageEventContent::text_html(
+                        format!("Oops, that's a crash\n{e:?}"),
+                        format!("Oops, that's a crash<br><pre>{e:?}</pre>"),
+                    ))
+                } else {
+                    None
+                }
+            };
+
+            if let Some(err_content) = err_content {
+                let _ = reply_to(&context, err_content).await;
+            }
         }
-    };
-
-    if let Some(err_content) = err_content {
-        let _ = reply_to(&context, err_content).await;
-    }
+        .in_current_span(),
+    );
 }
