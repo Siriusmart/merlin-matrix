@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use diesel::{
     ExpressionMethods, RunQueryDsl, Selectable,
     prelude::{Associations, Identifiable, Insertable, Queryable},
@@ -12,9 +14,19 @@ use crate::org::{
 #[derive(DieselNewType, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ContextPermissionPriority(i32);
 
+impl Display for ContextPermissionPriority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
 impl ContextPermissionPriority {
     pub fn new(value: i32) -> Self {
         Self(value)
+    }
+
+    pub fn value(&self) -> i32 {
+        self.0
     }
 }
 

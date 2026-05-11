@@ -1,14 +1,15 @@
 use diesel::{
     ExpressionMethods, JoinOnDsl, NullableExpressionMethods, OptionalExtension, QueryDsl,
-    RunQueryDsl, SqliteExpressionMethods,
+    RunQueryDsl, SqliteExpressionMethods, prelude::Queryable,
 };
 use tracing::*;
 
 use crate::org::{
     DatabaseConnection,
-    context_permissions::context_permissions,
+    context_permissions::{ContextPermissionPriority, context_permissions},
     contexts::{Context, ContextId, contexts},
     group_users::group_users::{self, table},
+    groups::{GroupId, groups},
     permissions::permissions,
     rooms::{RoomId, rooms},
     users::users,
@@ -128,5 +129,39 @@ pub fn list_user_context_admin_s(
         .filter(users::m_user_id.eq(m_user_id))
         .filter(users::m_user_homeserver.eq(m_user_homeserver))
         .select(contexts::name)
+        .get_results(conn)
+}
+
+#[derive(Queryable)]
+pub struct ContextPermissionEntry {
+    pub qualifier: String,
+    pub allowed: bool,
+    pub group_id: GroupId,
+    pub group_name: String,
+    pub priority: ContextPermissionPriority,
+}
+
+pub fn permissions_of_context(
+    conn: &mut DatabaseConnection,
+    context_id: ContextId,
+) -> Result<Vec<ContextPermissionEntry>, diesel::result::Error> {
+    context_permissions::table
+        .inner_join(
+            permissions::table
+                .on(permissions::permission_id.eq(context_permissions::permission_id)),
+        )
+        .inner_join(contexts::table.on(contexts::context_id.eq(context_permissions::context_id)))
+        .inner_join(groups::table.on(groups::group_id.eq(context_permissions::group_id)))
+        .filter(context_permissions::context_id.eq(context_id))
+        .select((
+            permissions::qualifier,
+            context_permissions::allowed,
+            groups::group_id,
+            groups::name,
+            context_permissions::priority,
+        ))
+        .order_by(context_permissions::permission_id)
+        .then_order_by(context_permissions::priority)
+        .then_order_by(context_permissions::group_id)
         .get_results(conn)
 }
